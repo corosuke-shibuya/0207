@@ -5,19 +5,27 @@ import { upsertSparringSession } from "@/lib/deep-dive/store";
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const body = (await request.json()) as {
+      sessionId?: unknown;
+      personId?: unknown;
+      goal?: unknown;
+      scenario?: unknown;
+      history?: unknown;
+    };
     const sessionId = typeof body?.sessionId === "string" ? body.sessionId.trim() : "";
     const personId = typeof body?.personId === "string" ? body.personId.trim() : "";
     const goal = typeof body?.goal === "string" ? body.goal.trim() : "";
     const scenario = typeof body?.scenario === "string" ? body.scenario.trim() : "";
-    const history = Array.isArray(body?.history)
-      ? body.history
-          .map((turn) => ({
-            role: turn?.role === "assistant" ? "assistant" : "user",
-            content: typeof turn?.content === "string" ? turn.content : "",
-          }))
-          .filter((turn) => turn.content.trim().length > 0)
-      : [];
+    const rawHistory = Array.isArray(body?.history) ? body.history : [];
+    const history = rawHistory
+      .map((turn: unknown) => {
+        const item = turn as { role?: unknown; content?: unknown };
+        return {
+          role: item?.role === "assistant" ? "assistant" : "user",
+          content: typeof item?.content === "string" ? item.content : "",
+        };
+      })
+      .filter((turn: { content: string }) => turn.content.trim().length > 0);
 
     if (!personId || !scenario || history.length === 0) {
       return NextResponse.json({ error: "personId, scenario, history are required" }, { status: 400 });
