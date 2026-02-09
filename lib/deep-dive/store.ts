@@ -226,7 +226,7 @@ export async function createSession(input: {
       include: { contextNotes: true },
     });
 
-    return {
+    const createdSession: CoachingSession = {
       id: row.id,
       userId: row.userId,
       personId: row.personId,
@@ -236,6 +236,7 @@ export async function createSession(input: {
       createdAt: toIso(row.createdAt),
       contextNoteIds: row.contextNotes.map((ctx) => ctx.noteId),
     };
+    return createdSession;
   }, () => memoryCreateSession(input));
 }
 
@@ -367,7 +368,13 @@ export async function getSessionDetail(sessionId: string) {
   }, () => memoryGetSessionDetail(sessionId));
 }
 
-export async function exportAllData() {
+export async function exportAllData(): Promise<{
+  exportedAt: string;
+  notes: Note[];
+  people: Person[];
+  sessions: CoachingSession[];
+  artifacts: Artifact[];
+}> {
   return withPersistence(async () => {
     const userId = await getCurrentUserId();
     const [notes, people, sessions, artifacts] = await Promise.all([
@@ -384,20 +391,22 @@ export async function exportAllData() {
       }),
     ]);
 
+    const exportedArtifacts: Artifact[] = artifacts.map((row) => ({
+      id: row.id,
+      sessionId: row.sessionId,
+      type: row.type,
+      payload: row.payload as ArtifactPayload,
+      model: row.model,
+      estimatedCost: row.estimatedCost ?? undefined,
+      createdAt: toIso(row.createdAt),
+    }));
+
     return {
       exportedAt: new Date().toISOString(),
       notes,
       people,
       sessions,
-      artifacts: artifacts.map((row) => ({
-        id: row.id,
-        sessionId: row.sessionId,
-        type: row.type,
-        payload: row.payload,
-        model: row.model,
-        estimatedCost: row.estimatedCost ?? undefined,
-        createdAt: toIso(row.createdAt),
-      })),
+      artifacts: exportedArtifacts,
     };
   }, () => memoryExportAllData());
 }
