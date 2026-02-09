@@ -1,5 +1,7 @@
 import { getServerSessionSafe, isGoogleAuthEnabled } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
+
 export default async function DeepDiveLayout({ children }: { children: React.ReactNode }) {
   const googleEnabled = isGoogleAuthEnabled();
   const session = await getServerSessionSafe();
