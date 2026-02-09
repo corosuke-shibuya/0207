@@ -1,0 +1,96 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String            @id @default(cuid())
+  email     String            @unique
+  name      String?
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  sessions  CoachingSession[]
+  notes     Note[]
+  people    Person[]
+}
+
+model Note {
+  id           String               @id @default(cuid())
+  userId       String
+  body         String
+  tags         String[]
+  createdAt    DateTime             @default(now())
+  user         User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contextNotes SessionContextNote[]
+}
+
+model Person {
+  id           String            @id @default(cuid())
+  userId       String
+  name         String
+  role         String?
+  relationship String?
+  typeAxes     Json
+  memo         String?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  sessions     CoachingSession[]
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model CoachingSession {
+  id           String               @id @default(cuid())
+  userId       String
+  personId     String
+  kind         SessionKind          @default(PRE)
+  goal         String?
+  inputText    String
+  status       SessionStatus        @default(COMPLETED)
+  createdAt    DateTime             @default(now())
+  artifacts    Artifact[]
+  person       Person               @relation(fields: [personId], references: [id], onDelete: Cascade)
+  user         User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contextNotes SessionContextNote[]
+}
+
+model SessionContextNote {
+  id        String          @id @default(cuid())
+  sessionId String
+  noteId    String
+  reason    String?
+  createdAt DateTime        @default(now())
+  note      Note            @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  session   CoachingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, noteId])
+}
+
+model Artifact {
+  id            String          @id @default(cuid())
+  sessionId     String
+  type          ArtifactType
+  payload       Json
+  model         String
+  estimatedCost Float?
+  createdAt     DateTime        @default(now())
+  session       CoachingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
+
+enum SessionKind {
+  PRE
+  POST
+}
+
+enum SessionStatus {
+  COMPLETED
+  FAILED
+}
+
+enum ArtifactType {
+  STRATEGY_BUNDLE
+  POSTMORTEM_BUNDLE
+}
