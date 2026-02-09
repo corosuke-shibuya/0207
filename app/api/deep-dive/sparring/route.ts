@@ -3,6 +3,11 @@ import { generateSparringTurn } from "@/lib/deep-dive/sparring";
 import { pickContextNoteIds } from "@/lib/deep-dive/context";
 import { upsertSparringSession } from "@/lib/deep-dive/store";
 
+type ChatTurn = {
+  role: "user" | "assistant";
+  content: string;
+};
+
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as {
@@ -17,11 +22,11 @@ export async function POST(request: Request) {
     const goal = typeof body?.goal === "string" ? body.goal.trim() : "";
     const scenario = typeof body?.scenario === "string" ? body.scenario.trim() : "";
     const rawHistory = Array.isArray(body?.history) ? body.history : [];
-    const history = rawHistory
+    const history: ChatTurn[] = rawHistory
       .map((turn: unknown) => {
         const item = turn as { role?: unknown; content?: unknown };
         return {
-          role: item?.role === "assistant" ? "assistant" : "user",
+          role: (item?.role === "assistant" ? "assistant" : "user") as "assistant" | "user",
           content: typeof item?.content === "string" ? item.content : "",
         };
       })
