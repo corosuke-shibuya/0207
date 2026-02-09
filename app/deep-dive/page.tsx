@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { listPeople, listSessions } from "@/lib/deep-dive/store";
 
+export const dynamic = "force-dynamic";
+
 type Props = {
   searchParams: Promise<{
     error?: string;

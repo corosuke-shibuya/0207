@@ -1,6 +1,8 @@
 import { createNoteAction } from "@/app/deep-dive/actions";
 import { listNotes } from "@/lib/deep-dive/store";
 
+export const dynamic = "force-dynamic";
+
 export default async function TimelinePage() {
   const notes = await listNotes();
 

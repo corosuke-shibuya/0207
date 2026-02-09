@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { getSessionDetail } from "@/lib/deep-dive/store";
 
+export const dynamic = "force-dynamic";
+
 type Props = {
   params: Promise<{ id: string }>;
 };

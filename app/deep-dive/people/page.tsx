@@ -2,6 +2,8 @@ import { createPersonAction } from "@/app/deep-dive/actions";
 import { PERSON_PRESETS } from "@/lib/deep-dive/person-presets";
 import { listPeople } from "@/lib/deep-dive/store";
 
+export const dynamic = "force-dynamic";
+
 export default async function PeoplePage() {
   const people = await listPeople();
 

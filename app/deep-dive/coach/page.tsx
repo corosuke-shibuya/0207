@@ -1,6 +1,8 @@
 import { listPeople, listSessions } from "@/lib/deep-dive/store";
 import { SparringClient } from "@/app/deep-dive/coach/sparring-client";
 
+export const dynamic = "force-dynamic";
+
 export default async function CoachPage() {
   const [people, sessions] = await Promise.all([listPeople(), listSessions()]);
   const recentSessions = sessions.slice(0, 20).map((session) => {
