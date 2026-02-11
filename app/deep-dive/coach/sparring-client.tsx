@@ -23,6 +23,11 @@ type RecentSession = {
   inputText: string;
 };
 
+const QUICK_SUGGESTIONS = [
+  "明日の上司とのミーティング、どう準備したらいい?",
+  "メンバーをイライラさせてしまった原因は?",
+];
+
 export function SparringClient({
   people,
   recentSessions,
@@ -39,14 +44,10 @@ export function SparringClient({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const canStart = useMemo(() => Boolean(personId && scenario.trim().length >= 8 && !loading), [personId, scenario, loading]);
   const canSend = useMemo(
     () => Boolean(history.some((turn) => turn.role === "assistant") && input.trim().length > 0 && !loading),
     [history, input, loading],
-  );
-
-  const canStart = useMemo(
-    () => Boolean(personId && scenario.trim().length >= 12 && !loading),
-    [personId, scenario, loading],
   );
 
   async function sendTurn(nextUserMessage?: string, options?: { hideUser?: boolean }) {
@@ -83,6 +84,7 @@ export function SparringClient({
       setLoading(false);
       return;
     }
+
     if (typeof data.sessionId === "string") {
       setSessionId(data.sessionId);
     }
@@ -92,7 +94,10 @@ export function SparringClient({
     setLoading(false);
   }
 
-  async function startSparring() {
+  async function startSparring(prefill?: string) {
+    if (prefill && !scenario.trim()) {
+      setScenario(prefill);
+    }
     const bootPrompt = [
       "この状況について、まず最初に私へフィードバックしてください。",
       "次に、相手が返してきそうな反応と私の改善ポイントを簡潔にください。",
@@ -102,15 +107,60 @@ export function SparringClient({
     await sendTurn(bootPrompt, { hideUser: true });
   }
 
+  if (people.length === 0) {
+    return (
+      <section className="screen">
+        <article className="card">
+          <p className="section-title">AI相談</p>
+          <p className="muted" style={{ marginBottom: 14 }}>
+            先に相手を1人登録すると、タイプに合わせた壁打ちができます。
+          </p>
+          <Link href="/deep-dive/people" className="primary-button" style={{ display: "inline-block" }}>
+            相手を登録する
+          </Link>
+        </article>
+      </section>
+    );
+  }
+
   return (
-    <div className="grid-2">
+    <section className="screen">
+      <div className="page-heading" style={{ alignItems: "center" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          <div className="avatar-circle" style={{ width: 96, height: 96, fontSize: "2.4rem" }}>
+            🐶
+          </div>
+          <div>
+            <h1>AIコミュニケーション相談</h1>
+            <p>あなたの文脈をふまえて、具体的なアドバイスを返します</p>
+          </div>
+        </div>
+      </div>
+
       <article className="card">
-        <p className="section-title">壁打ち設定</p>
-        <div className="input-area">
-          <label>
-            相手
+        <p className="section-title" style={{ fontSize: "1.5rem" }}>よくある相談</p>
+        <div className="suggestion-grid" style={{ marginBottom: 14 }}>
+          {QUICK_SUGGESTIONS.map((suggestion) => (
+            <button
+              key={suggestion}
+              type="button"
+              className="suggestion"
+              onClick={async () => {
+                setScenario(suggestion);
+                setInput("");
+                await startSparring(suggestion);
+              }}
+              disabled={loading}
+            >
+              {suggestion}
+            </button>
+          ))}
+        </div>
+
+        <div className="grid-2">
+          <label className="input-area" style={{ gap: 6 }}>
+            <span>相談する相手</span>
             <select value={personId} onChange={(event) => setPersonId(event.target.value)}>
-              <option value="">選択してください</option>
               {people.map((person) => (
                 <option key={person.id} value={person.id}>
                   {person.name} {person.role ? `(${person.role})` : ""}
@@ -118,77 +168,79 @@ export function SparringClient({
               ))}
             </select>
           </label>
-          <input value={goal} onChange={(event) => setGoal(event.target.value)} placeholder="ゴール（例: 部長とリスク認識を握る）" />
+          <label className="input-area" style={{ gap: 6 }}>
+            <span>ゴール（任意）</span>
+            <input value={goal} onChange={(event) => setGoal(event.target.value)} placeholder="例: 相手と合意できる選択肢を作る" />
+          </label>
+        </div>
+
+        <label className="input-area" style={{ marginTop: 12, gap: 6 }}>
+          <span>状況</span>
           <textarea
             value={scenario}
             onChange={(event) => setScenario(event.target.value)}
-            placeholder="状況（背景・制約・懸念）"
+            placeholder="いま困っている状況を短く書いてください"
           />
-          <button className="primary-button" type="button" disabled={!canStart} onClick={startSparring}>
-            {loading ? "壁打ち開始中..." : "左の設定で開始"}
+        </label>
+
+        <div className="button-row" style={{ marginTop: 12 }}>
+          <button className="primary-button" type="button" onClick={() => startSparring()} disabled={!canStart}>
+            {loading ? "相談開始中..." : "AIに相談を開始"}
           </button>
-        </div>
-        {sessionId ? (
-          <div className="dd-inline-actions" style={{ marginTop: 12 }}>
+          {sessionId ? (
             <Link href={`/deep-dive/sessions/${sessionId}`} className="secondary-button">
-              この壁打ちをDetailで見る
+              この相談をDetailで見る
             </Link>
-          </div>
-        ) : null}
-        <div style={{ marginTop: 14 }}>
-          <p className="section-title">壁打ち履歴</p>
-          {recentSessions.length === 0 ? (
-            <p className="dd-muted">まだ履歴がありません。</p>
-          ) : (
-            <div className="timeline">
-              {recentSessions.slice(0, 8).map((item) => (
-                <Link key={item.id} href={`/deep-dive/sessions/${item.id}`} className="chat-bubble">
-                  <strong>{item.kind === "PRE" ? "事前相談" : "事後振り返り"}</strong>
-                  <p>{item.personName}</p>
-                  <p className="dd-muted">{new Date(item.createdAt).toLocaleString("ja-JP")}</p>
-                  <p className="dd-muted">{item.inputText.slice(0, 60)}</p>
-                </Link>
-              ))}
-            </div>
-          )}
+          ) : null}
         </div>
       </article>
 
       <article className="card">
-        <p className="section-title">AI壁打ち / Detail</p>
-        <div className="timeline dd-list" style={{ marginBottom: 10 }}>
-          <p>相手: {people.find((person) => person.id === personId)?.name ?? "未選択"}</p>
-          <p>ゴール: {goal || "未設定"}</p>
-        </div>
-        <div className="timeline dd-chat-log">
+        <div className="chat-window">
           {history.filter((turn) => !turn.hidden).length === 0 ? (
-            <p className="dd-muted">左の設定を入力して開始ボタンを押すと、AIが先に返答します。</p>
+            <div className="dd-turn-ai">
+              <p className="dd-message-text">こんにちは! コミュニケーションのこと、何が相談したいですか?</p>
+            </div>
           ) : (
-            history.filter((turn) => !turn.hidden).map((turn, index) => (
-              <div key={index} className={turn.role === "user" ? "dd-turn-user" : "dd-turn-ai"}>
-                <p className="dd-muted">{turn.role === "user" ? "あなた" : "AI"}</p>
-                <pre className="dd-message-text">{turn.content}</pre>
-              </div>
-            ))
+            history
+              .filter((turn) => !turn.hidden)
+              .map((turn, index) => (
+                <div key={index} className={turn.role === "assistant" ? "dd-turn-ai" : "dd-turn-user"}>
+                  <p className="dd-message-text">{turn.content}</p>
+                </div>
+              ))
           )}
         </div>
 
-        {history.some((turn) => turn.role === "assistant") ? (
-          <div className="input-area" style={{ marginTop: 12 }}>
-            <textarea
-              value={input}
-              onChange={(event) => setInput(event.target.value)}
-              placeholder="次に自分が言う一言を書く"
-            />
-            <button className="primary-button" type="button" disabled={!canSend} onClick={() => sendTurn()}>
-              {loading ? "壁打ち中..." : "返信する"}
-            </button>
-            {error ? <p>{error}</p> : null}
-          </div>
-        ) : (
-          error ? <p>{error}</p> : null
-        )}
+        <div className="input-area" style={{ marginTop: 14 }}>
+          <textarea
+            value={input}
+            onChange={(event) => setInput(event.target.value)}
+            placeholder="追加で伝えたいことを書く"
+          />
+          <button className="primary-button" type="button" disabled={!canSend} onClick={() => sendTurn()}>
+            {loading ? "返信生成中..." : "返信する"}
+          </button>
+          {error ? <p className="muted">{error}</p> : null}
+        </div>
       </article>
-    </div>
+
+      <article className="card">
+        <p className="section-title" style={{ fontSize: "1.4rem" }}>最近の相談</p>
+        <div className="timeline">
+          {recentSessions.length === 0 ? (
+            <p className="muted">まだ相談履歴がありません。</p>
+          ) : (
+            recentSessions.slice(0, 5).map((item) => (
+              <Link key={item.id} href={`/deep-dive/sessions/${item.id}`} className="chat-bubble">
+                <strong>{item.personName}</strong>
+                <p className="muted">{new Date(item.createdAt).toLocaleString("ja-JP")}</p>
+                <p>{item.inputText.slice(0, 90)}</p>
+              </Link>
+            ))
+          )}
+        </div>
+      </article>
+    </section>
   );
 }

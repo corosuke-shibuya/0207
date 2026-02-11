@@ -9,19 +9,19 @@ type Props = {
 
 export function AuthButtons({ email, googleEnabled }: Props) {
   if (!googleEnabled) {
-    return <span className="dd-muted">Demo mode</span>;
+    return <span className="auth-status">Demo mode</span>;
   }
 
   if (email) {
     return (
       <div className="auth-area">
-        <span className="dd-muted">{email}</span>
+        <span className="auth-status">{email}</span>
         <button
           className="ghost-button"
           type="button"
           onClick={() => signOut({ callbackUrl: "/deep-dive" })}
         >
-          Logout
+          ログアウト
         </button>
       </div>
     );
@@ -33,7 +33,7 @@ export function AuthButtons({ email, googleEnabled }: Props) {
       type="button"
       onClick={() => signIn("google", { callbackUrl: "/deep-dive" })}
     >
-      Google Login
+      Googleログイン
     </button>
   );
 }

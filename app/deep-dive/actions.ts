@@ -23,6 +23,7 @@ export async function createNoteAction(formData: FormData) {
   }
 
   await createNote(body.slice(0, 600), []);
+  revalidatePath("/deep-dive");
   revalidatePath("/deep-dive/timeline");
 }
 
