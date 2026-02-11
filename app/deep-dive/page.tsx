@@ -1,5 +1,6 @@
 import { createNoteAction } from "@/app/deep-dive/actions";
 import { HomeNoteForm } from "@/app/deep-dive/home-note-form";
+import { getServerSessionSafe } from "@/lib/auth";
 import { listNotes } from "@/lib/deep-dive/store";
 
 export const dynamic = "force-dynamic";
@@ -17,8 +18,10 @@ function getAuthErrorMessage(error?: string) {
 
 export default async function DeepDiveHomePage({ searchParams }: Props) {
   const params = await searchParams;
+  const session = await getServerSessionSafe();
   const authError = getAuthErrorMessage(params.error);
   const notes = await listNotes(8);
+  const showAuthError = Boolean(authError && !session?.user?.email);
 
   return (
     <section className="screen">
@@ -29,7 +32,7 @@ export default async function DeepDiveHomePage({ searchParams }: Props) {
         </div>
       </div>
 
-      {authError ? (
+      {showAuthError ? (
         <article className="card" style={{ borderColor: "#f3b7b7", background: "#fff3f3" }}>
           <p className="section-title" style={{ fontSize: "1.3rem" }}>ログインエラー</p>
           <p className="muted">{authError}</p>
