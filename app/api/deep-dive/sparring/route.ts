@@ -36,17 +36,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "personId, scenario, history are required" }, { status: 400 });
     }
 
+    const contextNoteIds = await pickContextNoteIds(scenario, "PRE", personId);
+
     const result = await generateSparringTurn({
       sessionId: sessionId || undefined,
       personId,
       goal,
       scenario,
       history,
+      contextNoteIds,
     });
 
     const assistantText = `相手役: ${result.roleplay_reply}\n\nコーチ: ${result.coach_feedback}`;
     const turns = [...history, { role: "assistant" as const, content: assistantText }];
-    const contextNoteIds = await pickContextNoteIds(scenario, "PRE", personId);
     const saved = await upsertSparringSession({
       sessionId: sessionId || undefined,
       personId,

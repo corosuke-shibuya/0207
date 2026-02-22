@@ -30,6 +30,7 @@ export async function POST(request: Request) {
       personId,
       inputText,
       goal,
+      contextNoteIds,
     });
 
     const artifact = await attachArtifact(session.id, generated.payload, generated.model);

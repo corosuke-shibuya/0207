@@ -122,4 +122,5 @@ export type CoachRequest = {
   personId: string;
   inputText: string;
   goal?: string;
+  contextNoteIds?: string[];
 };

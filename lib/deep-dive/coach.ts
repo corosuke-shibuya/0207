@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 import { getPerson, listNotes, listSessions } from "@/lib/deep-dive/store";
-import { ArtifactPayload, CoachRequest } from "@/lib/deep-dive/types";
+import { ArtifactPayload, CoachRequest, Note } from "@/lib/deep-dive/types";
 
 const model = process.env.OPENAI_MODEL ?? "gpt-4.1-mini";
 const client = process.env.OPENAI_API_KEY
@@ -129,13 +129,34 @@ function fallbackPayload(kind: "PRE" | "POST", goal?: string): ArtifactPayload {
   };
 }
 
+function trimNote(note: Note) {
+  return {
+    id: note.id,
+    body: note.body.slice(0, 220),
+    createdAt: note.createdAt,
+  };
+}
+
+function pickPromptNotes(allNotes: Note[], contextNoteIds?: string[]) {
+  if (!contextNoteIds || contextNoteIds.length === 0) {
+    return allNotes.slice(0, 6);
+  }
+
+  const selected = contextNoteIds
+    .map((id) => allNotes.find((note) => note.id === id))
+    .filter((note): note is Note => Boolean(note))
+    .slice(0, 6);
+
+  return selected.length > 0 ? selected : allNotes.slice(0, 6);
+}
+
 function buildPrompt(input: {
   request: CoachRequest;
   person: NonNullable<Awaited<ReturnType<typeof getPerson>>>;
-  recentNotes: { body: string; createdAt: string }[];
+  promptNotes: { id: string; body: string; createdAt: string }[];
   similarSessions: { kind: string; inputText: string; createdAt: string }[];
 }) {
-  const { request, person, recentNotes, similarSessions } = input;
+  const { request, person, promptNotes, similarSessions } = input;
 
   return [
     "あなたはコミュニケーション助言コーチです。",
@@ -150,7 +171,10 @@ function buildPrompt(input: {
     `今回の目的: ${request.goal || "未指定"}`,
     `今回の状況: ${request.inputText}`,
     `相手情報: ${JSON.stringify(person)}`,
-    `参照ノート: ${JSON.stringify(recentNotes)}`,
+    request.contextNoteIds?.length
+      ? `参照ノートソース: contextNoteIds(${request.contextNoteIds.length}件)優先`
+      : "参照ノートソース: 直近ノート優先",
+    `参照ノート: ${JSON.stringify(promptNotes)}`,
     `類似セッション: ${JSON.stringify(similarSessions)}`,
   ].join("\n");
 }
@@ -181,13 +205,14 @@ export async function generateCoachingBundle(request: CoachRequest): Promise<{
     throw new Error("相手が見つかりません");
   }
 
-  const recentNotes = (await listNotes(6)).map((row) => ({ body: row.body, createdAt: row.createdAt }));
+  const allNotes = await listNotes(80);
+  const promptNotes = pickPromptNotes(allNotes, request.contextNoteIds).map(trimNote);
   const similarSessions = (await listSessions())
     .filter((row) => row.personId === request.personId)
     .slice(0, 3)
     .map((row) => ({ kind: row.kind, inputText: row.inputText, createdAt: row.createdAt }));
 
-  const prompt = buildPrompt({ request, person, recentNotes, similarSessions });
+  const prompt = buildPrompt({ request, person, promptNotes, similarSessions });
 
   if (!client) {
     return {

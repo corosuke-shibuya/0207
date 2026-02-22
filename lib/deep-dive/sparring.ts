@@ -1,6 +1,6 @@
 import OpenAI from "openai";
-import { getPerson, listRecentSparringSnapshots } from "@/lib/deep-dive/store";
-import { Person } from "@/lib/deep-dive/types";
+import { getPerson, listNotes, listRecentSparringSnapshots } from "@/lib/deep-dive/store";
+import { Note, Person } from "@/lib/deep-dive/types";
 
 type ChatTurn = {
   role: "user" | "assistant";
@@ -292,6 +292,7 @@ export async function generateSparringTurn(input: {
   goal: string;
   scenario: string;
   history: ChatTurn[];
+  contextNoteIds?: string[];
 }): Promise<SparringResponse> {
   const person = await getPerson(input.personId);
   if (!person) {
@@ -306,6 +307,13 @@ export async function generateSparringTurn(input: {
     goal: item.goal,
     scenario: item.scenario,
   }));
+
+  const allNotes = await listNotes(80);
+  const contextNotes = (input.contextNoteIds ?? [])
+    .map((id) => allNotes.find((note) => note.id === id))
+    .filter((note): note is Note => Boolean(note))
+    .slice(0, 4)
+    .map((note) => ({ id: note.id, body: note.body.slice(0, 160), createdAt: note.createdAt }));
 
   const lastUser = [...input.history].reverse().find((turn) => turn.role === "user")?.content ?? "";
   const previousAssistant = [...input.history].reverse().find((turn) => turn.role === "assistant")?.content ?? "";
@@ -336,6 +344,7 @@ export async function generateSparringTurn(input: {
     `相談ゴール: ${input.goal || "未設定"}`,
     `状況: ${input.scenario}`,
     buildPersonGuidance(person),
+    `参照ノート: ${JSON.stringify(contextNotes)}`,
     `同一相手の過去壁打ち要約: ${JSON.stringify(
       recent.map((item) => ({
         date: item.createdAt,

@@ -67,6 +67,7 @@ export async function runCoachingAction(formData: FormData) {
     personId,
     inputText,
     goal,
+    contextNoteIds,
   });
 
   await attachArtifact(session.id, generated.payload, generated.model);
