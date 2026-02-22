@@ -154,10 +154,12 @@ function evaluatePersonFit(parsed: SparringResponse, person: Person) {
 function buildPersonGuidance(person: Person) {
   const a = person.typeAxes;
   const priorityMap = {
+    politics: "見え方・評価・支持者への影響を重視。筋の良さだけでは動かない。",
+    logic: "正しさと整合性を重視。矛盾のない説明が最優先。",
+    risk: "責任回避と炎上回避を重視。前例・監査耐性が重要。",
     outcome: "成果・進捗を最優先。抽象論より実行案。",
-    relationship: "関係維持を重視。配慮と合意形成が重要。",
-    accuracy: "定義と根拠を重視。曖昧表現は避ける。",
     speed: "意思決定スピード重視。選択肢は絞る。",
+    harmony: "場の調和と合意を重視。衝突回避と関係維持が重要。",
   } as const;
   const directnessMap = {
     direct: "直接的で明確な言い方を好む。",

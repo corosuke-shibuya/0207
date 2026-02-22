@@ -4,6 +4,15 @@ import { listPeople } from "@/lib/deep-dive/store";
 
 export const dynamic = "force-dynamic";
 
+const priorityLabelMap = {
+  politics: "評価・ポジション型",
+  logic: "正しさ・論理型",
+  risk: "リスク回避型",
+  outcome: "成果・数字型",
+  speed: "スピード・決断型",
+  harmony: "合意・調和型",
+} as const;
+
 export default async function PeoplePage() {
   const people = await listPeople();
 
@@ -45,7 +54,7 @@ export default async function PeoplePage() {
                     {person.name}
                     {person.role ? ` (${person.role})` : ""}
                   </strong>
-                  <span className="dd-pill">{person.typeAxes.priority}</span>
+                  <span className="dd-pill">{priorityLabelMap[person.typeAxes.priority]}</span>
                 </div>
                 <p className="dd-muted">{person.relationship || "関係未設定"}</p>
                 <div className="dd-axes">

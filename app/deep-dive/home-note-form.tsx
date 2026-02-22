@@ -11,12 +11,15 @@ export function HomeNoteForm({ action }: Props) {
 
   return (
     <form action={action} className="input-area">
+      <p className="muted">
+        うまくいかなかった出来事だけでOKです。改善案は書かなくて大丈夫。
+      </p>
       <textarea
         name="body"
         maxLength={600}
         value={value}
         onChange={(event) => setValue(event.target.value)}
-        placeholder="今日のコミュニケーションについて、自由に書いてみましょう..."
+        placeholder="何が起きたか・相手の反応・何がわからないかを書いてください（例: 部長に遮られた。どこを先に言えばよかったかわからない）"
         required
       />
       <div className="form-foot">

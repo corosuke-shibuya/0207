@@ -1,7 +1,7 @@
 export type SessionKind = "PRE" | "POST";
 
 export type TypeAxes = {
-  priority: "outcome" | "relationship" | "accuracy" | "speed";
+  priority: "politics" | "logic" | "risk" | "outcome" | "speed" | "harmony";
   directness: "direct" | "indirect";
   verbosity: "short" | "long";
   emphasis: "emotional" | "logical";

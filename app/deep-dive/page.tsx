@@ -28,7 +28,7 @@ export default async function DeepDiveHomePage({ searchParams }: Props) {
       <div className="page-heading">
         <div>
           <h1>おかえりなさい!</h1>
-          <p>今日の気づきを記録しましょう</p>
+          <p>うまくいかなかった会話を、未整理のまま記録しましょう</p>
         </div>
       </div>
 
