@@ -447,7 +447,7 @@ export async function generateSparringTurn(input: {
       ],
     } satisfies Record<SparringMode, string[]>)[input.mode],
     "回答は常にユーザー固有文脈ベース。一般的なマネージャー論・テンプレ論は禁止。",
-    "情報不足なら推測で埋めず、follow_up_question で1つだけ具体質問を返す。",
+    "follow_up_question は情報が不足している場合のみ1つだけ具体質問を返す。ユーザーの入力で状況・目的・相手が十分に把握できる場合は空文字 \"\" にすること。会話が2往復以上進んだ後は、追加質問よりも具体的な助言を優先する。",
     "曖昧な一般論（例: 〜の可能性があります）だけで終えない。",
     "roleplay_reply はFACILITATIONモード以外では空文字 \"\" を返すこと。ロールプレイ要素を他フィールドに混入させないこと。",
     "coach_feedback は浅い感想禁止。必ず『なぜズレたか→どう直すか→次の一言例』まで書く。",

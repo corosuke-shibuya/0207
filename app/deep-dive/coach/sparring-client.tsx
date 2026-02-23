@@ -41,15 +41,7 @@ const MODE_OPTIONS: { value: SparringMode; label: string; helper: string }[] = [
   { value: "FACILITATION", label: "C. ファシリ支援", helper: "会議の論点整理と進行の詰まりを解消する" },
 ];
 
-function SparringResponseView({
-  data,
-  onSelectOption,
-}: {
-  data: SparringData;
-  onSelectOption: (option: string) => void;
-}) {
-  const [showDetail, setShowDetail] = useState(false);
-
+function SparringResponseView({ data }: { data: SparringData }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       {data.roleplay_reply.trim() && (
@@ -68,34 +60,7 @@ function SparringResponseView({
         </div>
       )}
 
-      <div
-        style={{
-          background: "#f7f8fa",
-          borderRadius: 12,
-          padding: "14px 18px",
-        }}
-      >
-        <p style={{ fontSize: "0.85rem", color: "#5a667b", fontWeight: 700, marginBottom: 6 }}>
-          状況分析
-        </p>
-        <p style={{ margin: 0, lineHeight: 1.7 }}>{data.analysis_summary}</p>
-      </div>
-
-      {data.follow_up_question.trim() && (
-        <div
-          style={{
-            background: "#fffbeb",
-            borderRadius: 12,
-            padding: "14px 18px",
-            borderLeft: "4px solid #f59e0b",
-          }}
-        >
-          <p style={{ fontSize: "0.85rem", color: "#b45309", fontWeight: 700, marginBottom: 6 }}>
-            確認したいこと
-          </p>
-          <p style={{ margin: 0, lineHeight: 1.7 }}>{data.follow_up_question}</p>
-        </div>
-      )}
+      {data.coach_feedback.trim() && <p style={{ margin: 0, lineHeight: 1.8 }}>{data.coach_feedback}</p>}
 
       {data.recommendations.length > 0 && (
         <div
@@ -117,78 +82,28 @@ function SparringResponseView({
       )}
 
       {data.next_options.length > 0 && (
-        <div>
+        <div style={{ background: "#f7f8fa", borderRadius: 12, padding: "14px 18px" }}>
           <p style={{ fontSize: "0.85rem", color: "#5a667b", fontWeight: 700, marginBottom: 8 }}>
-            次に言う一言を選んでください
+            🗣️ こんな切り出し方があります
           </p>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <ul style={{ margin: 0, paddingLeft: 20, lineHeight: 1.8 }}>
             {data.next_options.map((option, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => onSelectOption(option)}
-                style={{
-                  textAlign: "left",
-                  background: "#fff",
-                  border: "1.5px solid #d1d5db",
-                  borderRadius: 10,
-                  padding: "10px 16px",
-                  cursor: "pointer",
-                  fontSize: "0.95rem",
-                  lineHeight: 1.6,
-                  transition: "border-color 0.15s, background 0.15s",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = "#4a7cff";
-                  e.currentTarget.style.background = "#f0f4ff";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = "#d1d5db";
-                  e.currentTarget.style.background = "#fff";
-                }}
-              >
-                {option}
-              </button>
+              <li key={i} style={{ color: "#374151" }}>{option}</li>
             ))}
-          </div>
+          </ul>
         </div>
       )}
 
-      {data.coach_feedback.trim() && (
-        <div>
-          <button
-            type="button"
-            onClick={() => setShowDetail(!showDetail)}
-            style={{
-              background: "none",
-              border: "none",
-              color: "#4a7cff",
-              cursor: "pointer",
-              fontSize: "0.9rem",
-              padding: "4px 0",
-              fontWeight: 600,
-            }}
-          >
-            {showDetail ? "▼ コーチ解説を閉じる" : "▶ コーチ解説を見る"}
-          </button>
-          {showDetail && (
-            <div
-              style={{
-                background: "#faf9ff",
-                borderRadius: 12,
-                padding: "14px 18px",
-                marginTop: 8,
-                borderLeft: "4px solid #8b5cf6",
-              }}
-            >
-              <p style={{ margin: 0, lineHeight: 1.7 }}>{data.coach_feedback}</p>
-              {data.risk_note.trim() && (
-                <p style={{ margin: "10px 0 0", fontSize: "0.88rem", color: "#9333ea" }}>
-                  ⚠ {data.risk_note}
-                </p>
-              )}
-            </div>
-          )}
+      {data.follow_up_question.trim() && (
+        <div
+          style={{
+            background: "#fffbeb",
+            borderRadius: 12,
+            padding: "14px 18px",
+            borderLeft: "4px solid #f59e0b",
+          }}
+        >
+          <p style={{ margin: 0, lineHeight: 1.7 }}>{data.follow_up_question}</p>
         </div>
       )}
     </div>
@@ -226,10 +141,7 @@ export function SparringClient({
     setLoading(true);
     setError(null);
 
-    const nextHistory: ChatTurn[] = [
-      ...history,
-      { role: "user", content: userMessage },
-    ];
+    const nextHistory: ChatTurn[] = [...history, { role: "user", content: userMessage }];
     setHistory(nextHistory);
     setInput("");
 
@@ -375,12 +287,7 @@ export function SparringClient({
             history.map((turn, index) => (
               <div key={index} className={turn.role === "assistant" ? "dd-turn-ai" : "dd-turn-user"}>
                 {turn.role === "assistant" && turn.sparringData ? (
-                  <SparringResponseView
-                    data={turn.sparringData}
-                    onSelectOption={(option) => {
-                      setInput(option);
-                    }}
-                  />
+                  <SparringResponseView data={turn.sparringData} />
                 ) : (
                   <p className="dd-message-text">{turn.content}</p>
                 )}
