@@ -464,7 +464,7 @@ export async function adoptDraftForSession(sessionId: string, tone: string, mess
 
 export async function upsertSparringSession(input: {
   sessionId?: string;
-  personId: string;
+  personId?: string;
   goal?: string;
   scenario: string;
   mode: "PRE_REFLECT" | "PRE_STRATEGY" | "FACILITATION";
@@ -479,12 +479,47 @@ export async function upsertSparringSession(input: {
 }) {
   return withPersistence(async () => {
     const userId = await getCurrentUserId();
-    const person = await prisma.person.findFirst({
-      where: { id: input.personId, userId },
-      select: { id: true },
-    });
-    if (!person) {
-      throw new Error("Person not found");
+    let resolvedPersonId = input.personId;
+    if (resolvedPersonId) {
+      const person = await prisma.person.findFirst({
+        where: { id: resolvedPersonId, userId },
+        select: { id: true },
+      });
+      if (!person) {
+        resolvedPersonId = undefined;
+      }
+    }
+    if (!resolvedPersonId) {
+      const fallbackPerson = await prisma.person.findFirst({
+        where: { userId, name: "なし（未登録）", role: "未設定" },
+        select: { id: true },
+      });
+      if (fallbackPerson) {
+        resolvedPersonId = fallbackPerson.id;
+      } else {
+        const createdFallback = await prisma.person.create({
+          data: {
+            userId,
+            name: "なし（未登録）",
+            role: "未設定",
+            relationship: "未設定",
+            typeAxes: {
+              priority: "logic",
+              directness: "direct",
+              verbosity: "short",
+              emphasis: "logical",
+              stance: "cooperative",
+              decisionSpeed: "fast",
+            },
+            memo: "相談対象を未選択で実行したセッションの保存先",
+          },
+          select: { id: true },
+        });
+        resolvedPersonId = createdFallback.id;
+      }
+    }
+    if (!resolvedPersonId) {
+      throw new Error("Person not resolved");
     }
 
     let sessionId = input.sessionId;
@@ -492,7 +527,7 @@ export async function upsertSparringSession(input: {
       const created = await prisma.coachingSession.create({
         data: {
           userId,
-          personId: input.personId,
+          personId: resolvedPersonId,
           kind: "PRE",
           goal: input.goal?.trim() || null,
           inputText: input.scenario,

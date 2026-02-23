@@ -38,7 +38,7 @@ export function SparringClient({
   people: PersonOption[];
   recentSessions: RecentSession[];
 }) {
-  const [personId, setPersonId] = useState(people[0]?.id ?? "");
+  const [personId, setPersonId] = useState("");
   const [mode, setMode] = useState<SparringMode>("PRE_STRATEGY");
   const [scenario, setScenario] = useState("");
   const [input, setInput] = useState("");
@@ -47,7 +47,7 @@ export function SparringClient({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const canStart = useMemo(() => Boolean(personId && scenario.trim().length >= 8 && !loading), [personId, scenario, loading]);
+  const canStart = useMemo(() => Boolean(scenario.trim().length >= 8 && !loading), [scenario, loading]);
   const canSend = useMemo(
     () => Boolean(history.some((turn) => turn.role === "assistant") && input.trim().length > 0 && !loading),
     [history, input, loading],
@@ -113,22 +113,6 @@ export function SparringClient({
     await sendTurn(bootPrompt, { hideUser: true });
   }
 
-  if (people.length === 0) {
-    return (
-      <section className="screen">
-        <article className="card">
-          <p className="section-title">AI相談</p>
-          <p className="muted" style={{ marginBottom: 14 }}>
-            先に相手を1人登録すると、タイプに合わせた壁打ちができます。
-          </p>
-          <Link href="/deep-dive/people" className="primary-button" style={{ display: "inline-block" }}>
-            相手を登録する
-          </Link>
-        </article>
-      </section>
-    );
-  }
-
   return (
     <section className="screen">
       <div className="page-heading" style={{ alignItems: "center" }}>
@@ -150,11 +134,12 @@ export function SparringClient({
             <label
               key={option.value}
               style={{
-                display: "flex",
+                display: "grid",
+                gridTemplateColumns: "20px auto 1fr",
                 alignItems: "center",
-                gap: 8,
+                columnGap: 10,
+                rowGap: 2,
                 opacity: option.value === "FACILITATION" ? 0.45 : 1,
-                flexWrap: "wrap",
               }}
             >
               <input
@@ -165,7 +150,7 @@ export function SparringClient({
                 onChange={(event) => setMode(event.target.value as SparringMode)}
                 disabled={option.value === "FACILITATION"}
               />
-              <span>{option.label}</span>
+              <span style={{ fontWeight: 700 }}>{option.label}</span>
               <span style={{ color: "#5a667b", fontSize: "0.96rem", lineHeight: 1.4 }}>{option.helper}</span>
             </label>
           ))}
@@ -175,6 +160,7 @@ export function SparringClient({
           <label className="input-area" style={{ gap: 6 }}>
             <span>相談対象</span>
             <select value={personId} onChange={(event) => setPersonId(event.target.value)}>
+              <option value="">なし（未登録）</option>
               {people.map((person) => (
                 <option key={person.id} value={person.id}>
                   {person.name} {person.role ? `(${person.role})` : ""}
@@ -182,15 +168,13 @@ export function SparringClient({
               ))}
             </select>
           </label>
-          <div className="input-area" style={{ gap: 6, justifyContent: "flex-end" }}>
-            <small style={{ color: "#5a667b", fontSize: "0.96rem", lineHeight: 1.45 }}>
-              必要なら本文にゴールを書いてください（例: 責任論に入らず合意形成したい）
-            </small>
-          </div>
         </div>
 
         <label className="input-area" style={{ marginTop: 12, gap: 6 }}>
           <span>状況</span>
+          <small style={{ color: "#5a667b", fontSize: "0.96rem", lineHeight: 1.45 }}>
+            相談でクリアにしたいこと(相談のゴール)を入力するとより回答精度が上がります（例: 責任論に入らず合意形成したい）
+          </small>
           <textarea
             value={scenario}
             onChange={(event) => setScenario(event.target.value)}

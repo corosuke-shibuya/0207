@@ -22,9 +22,9 @@ export default async function RootLayout({
       <body suppressHydrationWarning>
         <header className="app-header">
           <div className="brand">
-            <div className="brand-mark">C</div>
+            <div className="brand-mark">D</div>
             <div>
-              <p className="brand-title">CommUp</p>
+              <p className="brand-title">DeepDive</p>
             </div>
           </div>
           <div className="header-right">

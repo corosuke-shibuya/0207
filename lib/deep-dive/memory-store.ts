@@ -221,7 +221,7 @@ export function memoryAdoptDraftForSession(sessionId: string, tone: string, mess
 
 export function memoryUpsertSparringSession(input: {
   sessionId?: string;
-  personId: string;
+  personId?: string;
   goal?: string;
   scenario: string;
   mode: "PRE_REFLECT" | "PRE_STRATEGY" | "FACILITATION";
@@ -239,9 +239,10 @@ export function memoryUpsertSparringSession(input: {
     : undefined;
 
   if (!existing) {
+    const resolvedPersonId = input.personId || "__none__";
     const session = memoryCreateSession({
       kind: "PRE",
-      personId: input.personId,
+      personId: resolvedPersonId,
       inputText: input.scenario,
       goal: input.goal,
       contextNoteIds: input.contextNoteIds,

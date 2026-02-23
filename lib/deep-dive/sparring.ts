@@ -358,20 +358,35 @@ function parseJsonObject(text: string): SparringResponse | null {
 
 export async function generateSparringTurn(input: {
   sessionId?: string;
-  personId: string;
+  personId?: string;
   goal: string;
   scenario: string;
   mode: SparringMode;
   history: ChatTurn[];
   contextNoteIds?: string[];
 }): Promise<SparringResponse> {
-  const person = await getPerson(input.personId);
-  if (!person) {
-    throw new Error("Person not found");
-  }
-  const recent = (await listRecentSparringSnapshots(input.personId, 3))
-    .filter((item) => item.sessionId !== input.sessionId)
-    .slice(0, 2);
+  const person =
+    (input.personId ? await getPerson(input.personId) : null) ??
+    ({
+      id: "__none__",
+      userId: "local",
+      name: "相談対象未指定",
+      typeAxes: {
+        priority: "logic",
+        directness: "direct",
+        verbosity: "short",
+        emphasis: "logical",
+        stance: "cooperative",
+        decisionSpeed: "fast",
+      },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    } as Person);
+  const recent = input.personId
+    ? (await listRecentSparringSnapshots(input.personId, 3))
+        .filter((item) => item.sessionId !== input.sessionId)
+        .slice(0, 2)
+    : [];
   const contextRefs = recent.map((item) => ({
     sessionId: item.sessionId,
     createdAt: item.createdAt,
