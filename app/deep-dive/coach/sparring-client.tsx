@@ -12,7 +12,6 @@ type PersonOption = {
 type ChatTurn = {
   role: "user" | "assistant";
   content: string;
-  hidden?: boolean;
 };
 
 type RecentSession = {
@@ -53,7 +52,7 @@ export function SparringClient({
     [history, input, loading],
   );
 
-  async function sendTurn(nextUserMessage?: string, options?: { hideUser?: boolean }) {
+  async function sendTurn(nextUserMessage?: string) {
     const userMessage = (nextUserMessage ?? input).trim();
     if (!userMessage) {
       return;
@@ -64,7 +63,7 @@ export function SparringClient({
 
     const nextHistory: ChatTurn[] = [
       ...history,
-      { role: "user", content: userMessage, hidden: options?.hideUser ?? false },
+      { role: "user", content: userMessage },
     ];
     setHistory(nextHistory);
     setInput("");
@@ -92,7 +91,9 @@ export function SparringClient({
       setSessionId(data.sessionId);
     }
 
-    const assistantText = `相手役: ${data.roleplay_reply}\n\nコーチ: ${data.coach_feedback}`;
+    const assistantText = typeof data.assistant_text === "string"
+      ? data.assistant_text
+      : `分析: ${data.analysis_summary}\n\n推奨行動:\n${(data.recommendations ?? []).map((item: string, index: number) => `${index + 1}. ${item}`).join("\n")}`;
     setHistory([...nextHistory, { role: "assistant", content: assistantText }]);
     setLoading(false);
   }
@@ -102,15 +103,9 @@ export function SparringClient({
       setScenario(prefill);
     }
     const activeScenario = (prefill && !scenario.trim() ? prefill : scenario).trim();
-    const bootPromptMap: Record<SparringMode, string> = {
-      PRE_REFLECT: `状況: ${activeScenario}\n依頼: 事前振り返りとして、失敗要因の仮説と次回の改善行動を具体化してください。`,
-      PRE_STRATEGY: `状況: ${activeScenario}\n依頼: 事前戦略として、この相手に通すための順序・言い方・次の一手を具体化してください。`,
-      FACILITATION: `状況: ${activeScenario}\n依頼: ファシリ支援として、論点整理と進行プランを具体化してください。`,
-    };
-    const bootPrompt = bootPromptMap[mode];
     setHistory([]);
     setSessionId(null);
-    await sendTurn(bootPrompt, { hideUser: true });
+    await sendTurn(activeScenario);
   }
 
   return (
@@ -192,18 +187,16 @@ export function SparringClient({
 
       <article className="card">
         <div className="chat-window">
-          {history.filter((turn) => !turn.hidden).length === 0 ? (
+          {history.length === 0 ? (
             <div className="dd-turn-ai">
               <p className="dd-message-text">こんにちは! コミュニケーションのこと、何が相談したいですか?</p>
             </div>
           ) : (
-            history
-              .filter((turn) => !turn.hidden)
-              .map((turn, index) => (
-                <div key={index} className={turn.role === "assistant" ? "dd-turn-ai" : "dd-turn-user"}>
-                  <p className="dd-message-text">{turn.content}</p>
-                </div>
-              ))
+            history.map((turn, index) => (
+              <div key={index} className={turn.role === "assistant" ? "dd-turn-ai" : "dd-turn-user"}>
+                <p className="dd-message-text">{turn.content}</p>
+              </div>
+            ))
           )}
         </div>
 

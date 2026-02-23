@@ -9,6 +9,25 @@ type ChatTurn = {
   content: string;
 };
 
+function normalizeLength(text: string) {
+  const MIN = 500;
+  const MAX = 2000;
+  if (text.length > MAX) {
+    return `${text.slice(0, MAX - 1)}…`;
+  }
+  if (text.length >= MIN) {
+    return text;
+  }
+  const filler = [
+    "",
+    "補足:",
+    "- 上記の推奨行動は、次の1回で全部やる必要はありません。まずは1つ目だけ実行し、反応を見て2つ目を追加してください。",
+    "- 相手が想定外の反応をした場合は、結論を繰り返した上で『何を優先して決めるべきか』を1点だけ確認してください。",
+    "- 実行後に、うまくいった一言とうまくいかなかった一言を1つずつ記録すると、次回の再現性が上がります。",
+  ].join("\n");
+  return `${text}\n${filler}`.slice(0, MAX);
+}
+
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as {
@@ -66,7 +85,8 @@ export async function POST(request: Request) {
     ]
       .filter(Boolean)
       .join("\n");
-    const turns = [...history, { role: "assistant" as const, content: assistantText }];
+    const normalizedAssistantText = normalizeLength(assistantText);
+    const turns = [...history, { role: "assistant" as const, content: normalizedAssistantText }];
     const saved = await upsertSparringSession({
       sessionId: sessionId || undefined,
       personId: personId || undefined,
@@ -83,7 +103,7 @@ export async function POST(request: Request) {
       riskNote: result.risk_note,
     });
 
-    return NextResponse.json({ ...result, sessionId: saved.sessionId });
+    return NextResponse.json({ ...result, assistant_text: normalizedAssistantText, sessionId: saved.sessionId });
   } catch {
     return NextResponse.json({ error: "Failed to generate sparring turn" }, { status: 500 });
   }

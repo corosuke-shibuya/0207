@@ -34,6 +34,14 @@ export default async function SessionDetailPage({ params }: Props) {
         {sparring ? (
           <>
             <p className="section-title">壁打ちログ</p>
+            <div className="timeline dd-chat-log" style={{ marginTop: 10 }}>
+              {sparring.turns.map((turn, index) => (
+                <div key={`${turn.role}-${index}`} className={turn.role === "user" ? "dd-turn-user" : "dd-turn-ai"}>
+                  <p className="dd-muted">{turn.role === "user" ? "あなた" : "AI"}</p>
+                  <pre className="dd-message-text">{turn.content}</pre>
+                </div>
+              ))}
+            </div>
             {sparring.analysis_summary ? (
               <div className="chat-bubble" style={{ marginTop: 10 }}>
                 <strong>分析結果</strong>
@@ -54,14 +62,6 @@ export default async function SessionDetailPage({ params }: Props) {
               </p>
             ) : null}
             <p className="dd-muted">進捗: {sparring.goal_progress ?? "low"}</p>
-            <div className="timeline dd-chat-log" style={{ marginTop: 10 }}>
-              {sparring.turns.map((turn, index) => (
-                <div key={`${turn.role}-${index}`} className={turn.role === "user" ? "dd-turn-user" : "dd-turn-ai"}>
-                  <p className="dd-muted">{turn.role === "user" ? "あなた" : "AI"}</p>
-                  <pre className="dd-message-text">{turn.content}</pre>
-                </div>
-              ))}
-            </div>
             <p className="dd-muted" style={{ marginTop: 10 }}>
               注意: {sparring.risk_note ?? "なし"}
             </p>

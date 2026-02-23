@@ -104,11 +104,10 @@ function overlapRatio(a: string, b: string) {
 }
 
 function validateResponseShape(parsed: SparringResponse) {
-  if (
-    !parsed.analysis_summary?.trim() ||
-    !parsed.roleplay_reply?.trim() ||
-    !parsed.coach_feedback?.trim()
-  ) {
+  if (!parsed.analysis_summary?.trim() || !parsed.coach_feedback?.trim()) {
+    return false;
+  }
+  if (parsed.mode === "FACILITATION" && !parsed.roleplay_reply?.trim()) {
     return false;
   }
   const recommendations = (parsed.recommendations ?? []).filter((item) => item.trim().length > 0);
@@ -420,17 +419,40 @@ export async function generateSparringTurn(input: {
 
   const prompt = [
     "あなたはコミュニケーション壁打ちコーチ。",
-    `現在モード: ${input.mode}（PRE_REFLECT=事前振り返り, PRE_STRATEGY=事前戦略, FACILITATION=ファシリ支援）`,
+    `現在モード: ${input.mode}`,
+    ...({
+      PRE_REFLECT: [
+        "【モード: 事前振り返り】",
+        "このモードでは相手役ロールプレイはしない。roleplay_reply は空文字 \"\" にすること。",
+        "ユーザーの状況を深く分析し、analysis_summary に固有の事実・人物名・詰まりポイントを書く。",
+        "coach_feedback でユーザーの思考の整理を手助けする。「なぜズレたか→どう直すか→次の一言例」の構成。",
+        "recommendations に次アクションを2〜3件入れる。",
+        "next_options は「ユーザーが次に考えるべき問い」または「次に取れるアプローチの選択肢」を3つ提示する。",
+      ],
+      PRE_STRATEGY: [
+        "【モード: 事前戦略】",
+        "このモードでは相手役ロールプレイはしない。roleplay_reply は空文字 \"\" にすること。",
+        "状況を踏まえた具体的な作戦を recommendations に書く。",
+        "coach_feedback で作戦の弱点と補強案を示す。",
+        "next_options は「相手に言う一言目の候補」を意図が異なる3案で提示する。",
+        "analysis_summary に状況分析を短く入れる。",
+      ],
+      FACILITATION: [
+        "【モード: ファシリ支援】",
+        "相手役として1つだけ返答する。それを roleplay_reply に入れる。コーチとしてのメタ解説は roleplay_reply に混ぜない。",
+        "coach_feedback はユーザー発言へのフィードバックのみ。相手役のセリフは含めない。",
+        "analysis_summary は最小限でよい。",
+        "recommendations に次アクションを2〜3件入れる。",
+        "next_options は「ユーザーが次に相手に言う一言の候補」を3つ提示する。",
+      ],
+    } satisfies Record<SparringMode, string[]>)[input.mode],
     "回答は常にユーザー固有文脈ベース。一般的なマネージャー論・テンプレ論は禁止。",
     "情報不足なら推測で埋めず、follow_up_question で1つだけ具体質問を返す。",
     "曖昧な一般論（例: 〜の可能性があります）だけで終えない。",
+    "roleplay_reply はFACILITATIONモード以外では空文字 \"\" を返すこと。ロールプレイ要素を他フィールドに混入させないこと。",
     "coach_feedback は浅い感想禁止。必ず『なぜズレたか→どう直すか→次の一言例』まで書く。",
     "analysis_summary は今回の状況固有名詞・事実・詰まりポイントを必ず含める。",
-    "1) 相手役としてリアルな返答を1つ作る。",
-    "2) コーチとして改善ポイントを短く返す。",
-    "3) analysis_summary に状況分析を短く入れる。",
-    "4) recommendations に次アクションを2〜3件入れる。",
-    "5) 次に言う一言の選択肢を3つ返す（互いに意図が異なる案にする）。",
+    "analysis_summary + coach_feedback + recommendations + roleplay_reply の合計は、日本語で500〜2000字に収める。",
     "禁止: 攻撃・威圧・不誠実な誘導。",
     "会話は実務的・中程度の長さ・次に動ける形。寄り添いは軽め。",
     "最重要: 直近ユーザー発話に必ず具体的に反応し、前回と同じ文を繰り返さない。",
