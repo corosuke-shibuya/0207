@@ -8,6 +8,7 @@ import {
   SparringSummary,
   SessionKind,
   TypeAxes,
+  UserProfile,
 } from "@/lib/deep-dive/types";
 
 const DEMO_USER_ID = "demo-user";
@@ -17,6 +18,7 @@ type StoreShape = {
   people: Person[];
   sessions: CoachingSession[];
   artifacts: Artifact[];
+  userProfile: UserProfile | null;
 };
 
 declare global {
@@ -57,6 +59,7 @@ function initialStore(): StoreShape {
     people: [seedPerson],
     sessions: [],
     artifacts: [],
+    userProfile: null,
   };
 }
 
@@ -182,6 +185,7 @@ export function memoryExportAllData() {
     people: store().people,
     sessions: store().sessions,
     artifacts: store().artifacts,
+    userProfile: store().userProfile,
   };
 }
 
@@ -191,7 +195,31 @@ export function memoryDeleteAllData() {
     people: [],
     sessions: [],
     artifacts: [],
+    userProfile: null,
   };
+}
+
+export function memoryGetUserProfile(): UserProfile | null {
+  return store().userProfile;
+}
+
+export function memoryUpsertUserProfile(input: {
+  name: string;
+  memo?: string;
+  typeAxes: TypeAxes;
+}): UserProfile {
+  const current = store().userProfile;
+  const next: UserProfile = {
+    id: current?.id ?? generateId("profile"),
+    userId: DEMO_USER_ID,
+    name: input.name.trim(),
+    typeAxes: input.typeAxes,
+    memo: input.memo?.trim() ?? "",
+    createdAt: current?.createdAt ?? nowIso(),
+    updatedAt: nowIso(),
+  };
+  store().userProfile = next;
+  return next;
 }
 
 export function memoryAdoptDraftForSession(sessionId: string, tone: string, message: string) {

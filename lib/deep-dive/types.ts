@@ -29,6 +29,16 @@ export type Person = {
   updatedAt: string;
 };
 
+export type UserProfile = {
+  id: string;
+  userId: string;
+  name: string;
+  typeAxes: TypeAxes;
+  memo: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type Strategy = {
   goal: string;
   principles: string[];

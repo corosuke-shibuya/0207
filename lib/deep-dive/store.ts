@@ -10,6 +10,7 @@ import {
   SparringSummary,
   SessionKind,
   TypeAxes,
+  UserProfile,
 } from "@/lib/deep-dive/types";
 import {
   memoryAttachArtifact,
@@ -21,11 +22,13 @@ import {
   memoryExportAllData,
   memoryGetPerson,
   memoryGetSessionDetail,
+  memoryGetUserProfile,
   memoryListNotes,
   memoryListPeople,
   memoryListSessions,
   memorySetSparringSummary,
   memoryListRecentSparringSnapshots,
+  memoryUpsertUserProfile,
   memoryUpsertSparringSession,
 } from "@/lib/deep-dive/memory-store";
 
@@ -193,6 +196,86 @@ export async function createPerson(input: {
       updatedAt: toIso(row.updatedAt),
     };
   }, () => memoryCreatePerson(input));
+}
+
+export async function getUserProfile(): Promise<UserProfile | null> {
+  return withPersistence(async () => {
+    const userId = await getCurrentUserId();
+    const row = await prisma.userProfile.findUnique({
+      where: { userId },
+    });
+    if (!row) {
+      return null;
+    }
+
+    return {
+      id: row.id,
+      userId: row.userId,
+      name: row.name,
+      typeAxes: {
+        priority: row.priority as TypeAxes["priority"],
+        directness: row.directness as TypeAxes["directness"],
+        verbosity: row.verbosity as TypeAxes["verbosity"],
+        emphasis: row.emphasis as TypeAxes["emphasis"],
+        stance: row.stance as TypeAxes["stance"],
+        decisionSpeed: row.decisionSpeed as TypeAxes["decisionSpeed"],
+      },
+      memo: row.memo,
+      createdAt: toIso(row.createdAt),
+      updatedAt: toIso(row.updatedAt),
+    };
+  }, () => memoryGetUserProfile());
+}
+
+export async function upsertUserProfile(input: {
+  name: string;
+  memo?: string;
+  typeAxes: TypeAxes;
+}): Promise<UserProfile> {
+  return withPersistence(async () => {
+    const userId = await getCurrentUserId();
+    const row = await prisma.userProfile.upsert({
+      where: { userId },
+      update: {
+        name: input.name.trim(),
+        memo: input.memo?.trim() ?? "",
+        priority: input.typeAxes.priority,
+        directness: input.typeAxes.directness,
+        verbosity: input.typeAxes.verbosity,
+        emphasis: input.typeAxes.emphasis,
+        stance: input.typeAxes.stance,
+        decisionSpeed: input.typeAxes.decisionSpeed,
+      },
+      create: {
+        userId,
+        name: input.name.trim(),
+        memo: input.memo?.trim() ?? "",
+        priority: input.typeAxes.priority,
+        directness: input.typeAxes.directness,
+        verbosity: input.typeAxes.verbosity,
+        emphasis: input.typeAxes.emphasis,
+        stance: input.typeAxes.stance,
+        decisionSpeed: input.typeAxes.decisionSpeed,
+      },
+    });
+
+    return {
+      id: row.id,
+      userId: row.userId,
+      name: row.name,
+      typeAxes: {
+        priority: row.priority as TypeAxes["priority"],
+        directness: row.directness as TypeAxes["directness"],
+        verbosity: row.verbosity as TypeAxes["verbosity"],
+        emphasis: row.emphasis as TypeAxes["emphasis"],
+        stance: row.stance as TypeAxes["stance"],
+        decisionSpeed: row.decisionSpeed as TypeAxes["decisionSpeed"],
+      },
+      memo: row.memo,
+      createdAt: toIso(row.createdAt),
+      updatedAt: toIso(row.updatedAt),
+    };
+  }, () => memoryUpsertUserProfile(input));
 }
 
 export async function createSession(input: {
@@ -374,10 +457,11 @@ export async function exportAllData(): Promise<{
   people: Person[];
   sessions: CoachingSession[];
   artifacts: Artifact[];
+  userProfile: UserProfile | null;
 }> {
   return withPersistence(async () => {
     const userId = await getCurrentUserId();
-    const [notes, people, sessions, artifacts] = await Promise.all([
+    const [notes, people, sessions, artifacts, userProfile] = await Promise.all([
       listNotes(500),
       listPeople(),
       listSessions(),
@@ -389,6 +473,7 @@ export async function exportAllData(): Promise<{
         },
         orderBy: { createdAt: "desc" },
       }),
+      getUserProfile(),
     ]);
 
     const exportedArtifacts: Artifact[] = artifacts.map((row) => ({
@@ -407,6 +492,7 @@ export async function exportAllData(): Promise<{
       people,
       sessions,
       artifacts: exportedArtifacts,
+      userProfile,
     };
   }, () => memoryExportAllData());
 }
@@ -421,6 +507,7 @@ export async function deleteAllData() {
       prisma.coachingSession.deleteMany({ where: { userId } }),
       prisma.note.deleteMany({ where: { userId } }),
       prisma.person.deleteMany({ where: { userId } }),
+      prisma.userProfile.deleteMany({ where: { userId } }),
     ]);
   }, () => memoryDeleteAllData());
 }

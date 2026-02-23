@@ -1,6 +1,6 @@
 import OpenAI from "openai";
-import { getPerson, listNotes, listRecentSparringSnapshots } from "@/lib/deep-dive/store";
-import { Note, Person, SparringMode } from "@/lib/deep-dive/types";
+import { getPerson, getUserProfile, listNotes, listRecentSparringSnapshots } from "@/lib/deep-dive/store";
+import { Note, Person, SparringMode, UserProfile } from "@/lib/deep-dive/types";
 
 type ChatTurn = {
   role: "user" | "assistant";
@@ -228,6 +228,58 @@ function buildPersonGuidance(person: Person) {
     .join("\n");
 }
 
+function buildUserGuidance(userProfile: UserProfile | null) {
+  if (!userProfile) {
+    return "";
+  }
+
+  const a = userProfile.typeAxes;
+  const priorityMap = {
+    politics: "見え方・評価を重視する傾向。",
+    logic: "正しさと整合性を重視する傾向。論理で押しすぎると相手が引く場面に注意。",
+    risk: "リスク回避を重視する傾向。慎重すぎて判断が遅れる場面に注意。",
+    outcome: "成果・スピードを重視する傾向。結論を急いで相手を置き去りにする場面に注意。",
+    speed: "意思決定スピードを重視する傾向。拙速になる場面に注意。",
+    harmony: "場の調和を重視する傾向。自分の意見を抑えすぎる場面に注意。",
+  } as const;
+  const directnessMap = {
+    direct: "ストレートに言う傾向。角が立つ場面に注意。",
+    indirect: "婉曲に言う傾向。意図が伝わらない場面に注意。",
+  } as const;
+  const verbosityMap = {
+    short: "説明が短い傾向。背景不足で誤解される場面に注意。",
+    long: "説明が長い傾向。要点がぼやける場面に注意。",
+  } as const;
+  const emphasisMap = {
+    emotional: "感情配慮を重視する傾向。",
+    logical: "論理・根拠を重視する傾向。感情面のケアが後回しになる場面に注意。",
+  } as const;
+  const stanceMap = {
+    defensive: "自分の意見を主張する傾向。対立を生みやすい場面に注意。",
+    cooperative: "協調的な傾向。自分の意見を抑えすぎる場面に注意。",
+  } as const;
+  const decisionSpeedMap = {
+    fast: "判断が早い傾向。拙速になる場面に注意。",
+    slow: "判断が慎重な傾向。タイミングを逃す場面に注意。",
+  } as const;
+
+  return [
+    "【ユーザー自身の特性】",
+    priorityMap[a.priority],
+    directnessMap[a.directness],
+    verbosityMap[a.verbosity],
+    emphasisMap[a.emphasis],
+    stanceMap[a.stance],
+    decisionSpeedMap[a.decisionSpeed],
+    userProfile.memo ? `本人の補足: ${userProfile.memo}` : "",
+    "",
+    "上記を踏まえ、ユーザーの癖や盲点を指摘し、この相手に対してユーザーが特に気をつけるべきポイントを coach_feedback に含めること。",
+    "一般的なコミュニケーション論ではなく、「あなたはこういう傾向があるから、この場面ではこう気をつけて」という形で助言すること。",
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
 function pickBySeed<T>(items: T[], seedText: string): T {
   let hash = 0;
   for (let i = 0; i < seedText.length; i += 1) {
@@ -364,6 +416,7 @@ export async function generateSparringTurn(input: {
   history: ChatTurn[];
   contextNoteIds?: string[];
 }): Promise<SparringResponse> {
+  const userProfile = await getUserProfile();
   const person =
     (input.personId ? await getPerson(input.personId) : null) ??
     ({
@@ -461,6 +514,7 @@ export async function generateSparringTurn(input: {
     `相談ゴール: ${input.goal || "未設定"}`,
     `状況: ${input.scenario}`,
     buildPersonGuidance(person),
+    buildUserGuidance(userProfile),
     `参照ノート: ${JSON.stringify(contextNotes)}`,
     `同一相手の過去壁打ち要約: ${JSON.stringify(
       recent.map((item) => ({

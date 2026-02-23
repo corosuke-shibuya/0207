@@ -73,11 +73,13 @@ function SparringResponseView({ data }: { data: SparringData }) {
           <p style={{ fontSize: "0.85rem", color: "#15803d", fontWeight: 700, marginBottom: 8 }}>
             おすすめアクション
           </p>
-          <ol style={{ margin: 0, paddingLeft: 20, lineHeight: 1.8 }}>
+          <ul style={{ margin: 0, paddingLeft: 0, listStyle: "none", lineHeight: 1.8 }}>
             {data.recommendations.map((item, i) => (
-              <li key={i}>{item}</li>
+              <li key={i} style={{ marginBottom: 4 }}>
+                {item}
+              </li>
             ))}
-          </ol>
+          </ul>
         </div>
       )}
 
@@ -113,9 +115,11 @@ function SparringResponseView({ data }: { data: SparringData }) {
 export function SparringClient({
   people,
   recentSessions,
+  hasUserProfile,
 }: {
   people: PersonOption[];
   recentSessions: RecentSession[];
+  hasUserProfile: boolean;
 }) {
   const [personId, setPersonId] = useState("");
   const [mode, setMode] = useState<SparringMode>("PRE_STRATEGY");
@@ -213,6 +217,24 @@ export function SparringClient({
           </div>
         </div>
       </div>
+
+      {!hasUserProfile && (
+        <div
+          style={{
+            background: "#fffbeb",
+            borderRadius: 12,
+            padding: "12px 18px",
+            borderLeft: "4px solid #f59e0b",
+          }}
+        >
+          <p style={{ margin: 0, fontSize: "0.95rem" }}>
+            💡 あなたの特性を登録すると、より的確なアドバイスが受けられます。
+            <Link href="/deep-dive/profile" style={{ color: "#4a7cff", marginLeft: 8 }}>
+              登録する →
+            </Link>
+          </p>
+        </div>
+      )}
 
       <article className="card">
         <div className="input-area" style={{ marginBottom: 14, gap: 8 }}>

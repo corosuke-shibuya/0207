@@ -8,6 +8,7 @@ const links = [
   { href: "/deep-dive/report", label: "分析レポート" },
   { href: "/deep-dive/people", label: "関係者" },
   { href: "/deep-dive/coach", label: "AI相談" },
+  { href: "/deep-dive/profile", label: "プロフィール" },
   { href: "/deep-dive/settings", label: "設定" },
 ];
 

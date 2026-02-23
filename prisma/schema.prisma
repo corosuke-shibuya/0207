@@ -16,6 +16,23 @@ model User {
   sessions  CoachingSession[]
   notes     Note[]
   people    Person[]
+  profile   UserProfile?
+}
+
+model UserProfile {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  name          String   @default("")
+  priority      String   @default("logic")
+  directness    String   @default("direct")
+  verbosity     String   @default("short")
+  emphasis      String   @default("logical")
+  stance        String   @default("cooperative")
+  decisionSpeed String   @default("fast")
+  memo          String   @default("")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Note {

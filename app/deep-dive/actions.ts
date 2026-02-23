@@ -12,8 +12,9 @@ import {
   createSession,
   deleteAllData,
   exportAllData,
+  upsertUserProfile,
 } from "@/lib/deep-dive/store";
-import { SessionKind } from "@/lib/deep-dive/types";
+import { SessionKind, TypeAxes } from "@/lib/deep-dive/types";
 
 export async function createNoteAction(formData: FormData) {
   const body = String(formData.get("body") ?? "").trim();
@@ -83,4 +84,38 @@ export async function deleteAllDataAction() {
   await deleteAllData();
   revalidatePath("/deep-dive");
   redirect("/deep-dive");
+}
+
+function pickAxis<T extends string>(value: string, allowed: readonly T[], fallback: T): T {
+  return (allowed.includes(value as T) ? value : fallback) as T;
+}
+
+export async function upsertUserProfileAction(formData: FormData) {
+  const name = String(formData.get("name") ?? "").trim();
+  if (!name) {
+    return;
+  }
+
+  const axes: TypeAxes = {
+    priority: pickAxis(
+      String(formData.get("priority") ?? ""),
+      ["politics", "logic", "risk", "outcome", "speed", "harmony"] as const,
+      "logic",
+    ),
+    directness: pickAxis(String(formData.get("directness") ?? ""), ["direct", "indirect"] as const, "direct"),
+    verbosity: pickAxis(String(formData.get("verbosity") ?? ""), ["short", "long"] as const, "short"),
+    emphasis: pickAxis(String(formData.get("emphasis") ?? ""), ["emotional", "logical"] as const, "logical"),
+    stance: pickAxis(String(formData.get("stance") ?? ""), ["defensive", "cooperative"] as const, "cooperative"),
+    decisionSpeed: pickAxis(String(formData.get("decisionSpeed") ?? ""), ["fast", "slow"] as const, "fast"),
+  };
+
+  const memo = String(formData.get("memo") ?? "").trim();
+
+  await upsertUserProfile({
+    name,
+    memo,
+    typeAxes: axes,
+  });
+  revalidatePath("/deep-dive/profile");
+  revalidatePath("/deep-dive/coach");
 }
