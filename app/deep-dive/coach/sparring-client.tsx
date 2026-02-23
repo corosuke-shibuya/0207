@@ -25,11 +25,6 @@ type RecentSession = {
 
 type SparringMode = "PRE_REFLECT" | "PRE_STRATEGY" | "FACILITATION";
 
-const QUICK_SUGGESTIONS = [
-  "明日の上司とのミーティング、どう準備したらいい?",
-  "メンバーをイライラさせてしまった原因は?",
-];
-
 const MODE_OPTIONS: { value: SparringMode; label: string; helper: string }[] = [
   { value: "PRE_REFLECT", label: "A. 事前振り返り", helper: "直近のズレ要因を整理して、次で直す点を絞る" },
   { value: "PRE_STRATEGY", label: "B. 事前戦略", helper: "相手に合わせた伝え方・順序・選択肢を作る" },
@@ -45,7 +40,6 @@ export function SparringClient({
 }) {
   const [personId, setPersonId] = useState(people[0]?.id ?? "");
   const [mode, setMode] = useState<SparringMode>("PRE_STRATEGY");
-  const [goal, setGoal] = useState("");
   const [scenario, setScenario] = useState("");
   const [input, setInput] = useState("");
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -82,7 +76,6 @@ export function SparringClient({
         sessionId,
         personId,
         mode,
-        goal,
         scenario,
         history: nextHistory.map((turn) => ({ role: turn.role, content: turn.content })),
       }),
@@ -108,10 +101,11 @@ export function SparringClient({
     if (prefill && !scenario.trim()) {
       setScenario(prefill);
     }
+    const activeScenario = (prefill && !scenario.trim() ? prefill : scenario).trim();
     const bootPromptMap: Record<SparringMode, string> = {
-      PRE_REFLECT: "この状況で自分の改善ポイントを先に分析し、次回の改善行動を具体化してください。",
-      PRE_STRATEGY: "この状況で相手タイプに合わせた事前戦略を作ってください。一般論ではなく私の文脈でお願いします。",
-      FACILITATION: "この状況で議論を前進させるためのファシリ支援をしてください。論点整理からお願いします。",
+      PRE_REFLECT: `状況: ${activeScenario}\n依頼: 事前振り返りとして、失敗要因の仮説と次回の改善行動を具体化してください。`,
+      PRE_STRATEGY: `状況: ${activeScenario}\n依頼: 事前戦略として、この相手に通すための順序・言い方・次の一手を具体化してください。`,
+      FACILITATION: `状況: ${activeScenario}\n依頼: ファシリ支援として、論点整理と進行プランを具体化してください。`,
     };
     const bootPrompt = bootPromptMap[mode];
     setHistory([]);
@@ -150,39 +144,35 @@ export function SparringClient({
       </div>
 
       <article className="card">
-        <p className="section-title" style={{ fontSize: "1.5rem" }}>よくある相談</p>
-        <div className="suggestion-grid" style={{ marginBottom: 14 }}>
-          {QUICK_SUGGESTIONS.map((suggestion) => (
-            <button
-              key={suggestion}
-              type="button"
-              className="suggestion"
-              onClick={async () => {
-                setScenario(suggestion);
-                setInput("");
-                await startSparring(suggestion);
+        <div className="input-area" style={{ marginBottom: 14, gap: 8 }}>
+          <span>相談モード</span>
+          {MODE_OPTIONS.map((option) => (
+            <label
+              key={option.value}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                opacity: option.value === "FACILITATION" ? 0.45 : 1,
               }}
-              disabled={loading}
             >
-              {suggestion}
-            </button>
+              <input
+                type="radio"
+                name="sparring-mode"
+                value={option.value}
+                checked={mode === option.value}
+                onChange={(event) => setMode(event.target.value as SparringMode)}
+                disabled={option.value === "FACILITATION"}
+              />
+              <span>{option.label}</span>
+              <small className="muted">{option.helper}</small>
+            </label>
           ))}
         </div>
 
         <div className="grid-2">
           <label className="input-area" style={{ gap: 6 }}>
-            <span>相談モード</span>
-            <select value={mode} onChange={(event) => setMode(event.target.value as SparringMode)}>
-              {MODE_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            <small className="muted">{MODE_OPTIONS.find((option) => option.value === mode)?.helper}</small>
-          </label>
-          <label className="input-area" style={{ gap: 6 }}>
-            <span>相談する相手</span>
+            <span>相談対象</span>
             <select value={personId} onChange={(event) => setPersonId(event.target.value)}>
               {people.map((person) => (
                 <option key={person.id} value={person.id}>
@@ -191,10 +181,9 @@ export function SparringClient({
               ))}
             </select>
           </label>
-          <label className="input-area" style={{ gap: 6 }}>
-            <span>ゴール（任意）</span>
-            <input value={goal} onChange={(event) => setGoal(event.target.value)} placeholder="例: 相手と合意できる選択肢を作る" />
-          </label>
+          <div className="input-area" style={{ gap: 6, justifyContent: "flex-end" }}>
+            <small className="muted">必要なら本文にゴールを書いてください（例: 責任論に入らず合意形成したい）</small>
+          </div>
         </div>
 
         <label className="input-area" style={{ marginTop: 12, gap: 6 }}>
@@ -210,11 +199,6 @@ export function SparringClient({
           <button className="primary-button" type="button" onClick={() => startSparring()} disabled={!canStart}>
             {loading ? "相談開始中..." : "AIに相談を開始"}
           </button>
-          {sessionId ? (
-            <Link href={`/deep-dive/sessions/${sessionId}`} className="secondary-button">
-              この相談をDetailで見る
-            </Link>
-          ) : null}
         </div>
         {error ? <p className="muted" style={{ marginTop: 8 }}>{error}</p> : null}
       </article>

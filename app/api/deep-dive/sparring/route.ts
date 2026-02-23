@@ -60,9 +60,9 @@ export async function POST(request: Request) {
       "",
       result.follow_up_question ? `確認質問: ${result.follow_up_question}` : "",
       "",
-      `相手の反応見立て: ${result.roleplay_reply}`,
+      `コーチ解説: ${result.coach_feedback}`,
       "",
-      `コーチ補足: ${result.coach_feedback}`,
+      `想定反応（必要なら使用）: ${result.roleplay_reply}`,
     ]
       .filter(Boolean)
       .join("\n");
