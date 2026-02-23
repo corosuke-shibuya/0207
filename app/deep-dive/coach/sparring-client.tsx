@@ -9,9 +9,20 @@ type PersonOption = {
   role?: string;
 };
 
+type SparringData = {
+  analysis_summary: string;
+  recommendations: string[];
+  coach_feedback: string;
+  next_options: string[];
+  follow_up_question: string;
+  roleplay_reply: string;
+  risk_note: string;
+};
+
 type ChatTurn = {
   role: "user" | "assistant";
   content: string;
+  sparringData?: SparringData;
 };
 
 type RecentSession = {
@@ -29,6 +40,160 @@ const MODE_OPTIONS: { value: SparringMode; label: string; helper: string }[] = [
   { value: "PRE_STRATEGY", label: "B. 事前戦略", helper: "相手に合わせた伝え方・順序・選択肢を作る" },
   { value: "FACILITATION", label: "C. ファシリ支援", helper: "会議の論点整理と進行の詰まりを解消する" },
 ];
+
+function SparringResponseView({
+  data,
+  onSelectOption,
+}: {
+  data: SparringData;
+  onSelectOption: (option: string) => void;
+}) {
+  const [showDetail, setShowDetail] = useState(false);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {data.roleplay_reply.trim() && (
+        <div
+          style={{
+            background: "#f0f4ff",
+            borderRadius: 12,
+            padding: "14px 18px",
+            borderLeft: "4px solid #4a7cff",
+          }}
+        >
+          <p style={{ fontSize: "0.85rem", color: "#4a7cff", fontWeight: 700, marginBottom: 6 }}>
+            相手の反応
+          </p>
+          <p style={{ margin: 0, lineHeight: 1.7 }}>{data.roleplay_reply}</p>
+        </div>
+      )}
+
+      <div
+        style={{
+          background: "#f7f8fa",
+          borderRadius: 12,
+          padding: "14px 18px",
+        }}
+      >
+        <p style={{ fontSize: "0.85rem", color: "#5a667b", fontWeight: 700, marginBottom: 6 }}>
+          状況分析
+        </p>
+        <p style={{ margin: 0, lineHeight: 1.7 }}>{data.analysis_summary}</p>
+      </div>
+
+      {data.follow_up_question.trim() && (
+        <div
+          style={{
+            background: "#fffbeb",
+            borderRadius: 12,
+            padding: "14px 18px",
+            borderLeft: "4px solid #f59e0b",
+          }}
+        >
+          <p style={{ fontSize: "0.85rem", color: "#b45309", fontWeight: 700, marginBottom: 6 }}>
+            確認したいこと
+          </p>
+          <p style={{ margin: 0, lineHeight: 1.7 }}>{data.follow_up_question}</p>
+        </div>
+      )}
+
+      {data.recommendations.length > 0 && (
+        <div
+          style={{
+            background: "#f0fdf4",
+            borderRadius: 12,
+            padding: "14px 18px",
+          }}
+        >
+          <p style={{ fontSize: "0.85rem", color: "#15803d", fontWeight: 700, marginBottom: 8 }}>
+            おすすめアクション
+          </p>
+          <ol style={{ margin: 0, paddingLeft: 20, lineHeight: 1.8 }}>
+            {data.recommendations.map((item, i) => (
+              <li key={i}>{item}</li>
+            ))}
+          </ol>
+        </div>
+      )}
+
+      {data.next_options.length > 0 && (
+        <div>
+          <p style={{ fontSize: "0.85rem", color: "#5a667b", fontWeight: 700, marginBottom: 8 }}>
+            次に言う一言を選んでください
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {data.next_options.map((option, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => onSelectOption(option)}
+                style={{
+                  textAlign: "left",
+                  background: "#fff",
+                  border: "1.5px solid #d1d5db",
+                  borderRadius: 10,
+                  padding: "10px 16px",
+                  cursor: "pointer",
+                  fontSize: "0.95rem",
+                  lineHeight: 1.6,
+                  transition: "border-color 0.15s, background 0.15s",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = "#4a7cff";
+                  e.currentTarget.style.background = "#f0f4ff";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = "#d1d5db";
+                  e.currentTarget.style.background = "#fff";
+                }}
+              >
+                {option}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {data.coach_feedback.trim() && (
+        <div>
+          <button
+            type="button"
+            onClick={() => setShowDetail(!showDetail)}
+            style={{
+              background: "none",
+              border: "none",
+              color: "#4a7cff",
+              cursor: "pointer",
+              fontSize: "0.9rem",
+              padding: "4px 0",
+              fontWeight: 600,
+            }}
+          >
+            {showDetail ? "▼ コーチ解説を閉じる" : "▶ コーチ解説を見る"}
+          </button>
+          {showDetail && (
+            <div
+              style={{
+                background: "#faf9ff",
+                borderRadius: 12,
+                padding: "14px 18px",
+                marginTop: 8,
+                borderLeft: "4px solid #8b5cf6",
+              }}
+            >
+              <p style={{ margin: 0, lineHeight: 1.7 }}>{data.coach_feedback}</p>
+              {data.risk_note.trim() && (
+                <p style={{ margin: "10px 0 0", fontSize: "0.88rem", color: "#9333ea" }}>
+                  ⚠ {data.risk_note}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function SparringClient({
   people,
@@ -91,10 +256,25 @@ export function SparringClient({
       setSessionId(data.sessionId);
     }
 
-    const assistantText = typeof data.assistant_text === "string"
-      ? data.assistant_text
-      : `分析: ${data.analysis_summary}\n\n推奨行動:\n${(data.recommendations ?? []).map((item: string, index: number) => `${index + 1}. ${item}`).join("\n")}`;
-    setHistory([...nextHistory, { role: "assistant", content: assistantText }]);
+    const sparringData: SparringData | undefined =
+      data.analysis_summary
+        ? {
+            analysis_summary: data.analysis_summary ?? "",
+            recommendations: data.recommendations ?? [],
+            coach_feedback: data.coach_feedback ?? "",
+            next_options: data.next_options ?? [],
+            follow_up_question: data.follow_up_question ?? "",
+            roleplay_reply: data.roleplay_reply ?? "",
+            risk_note: data.risk_note ?? "",
+          }
+        : undefined;
+
+    const assistantText =
+      typeof data.assistant_text === "string"
+        ? data.assistant_text
+        : data.analysis_summary ?? "回答を生成できませんでした。";
+
+    setHistory([...nextHistory, { role: "assistant", content: assistantText, sparringData }]);
     setLoading(false);
   }
 
@@ -194,7 +374,16 @@ export function SparringClient({
           ) : (
             history.map((turn, index) => (
               <div key={index} className={turn.role === "assistant" ? "dd-turn-ai" : "dd-turn-user"}>
-                <p className="dd-message-text">{turn.content}</p>
+                {turn.role === "assistant" && turn.sparringData ? (
+                  <SparringResponseView
+                    data={turn.sparringData}
+                    onSelectOption={(option) => {
+                      setInput(option);
+                    }}
+                  />
+                ) : (
+                  <p className="dd-message-text">{turn.content}</p>
+                )}
               </div>
             ))
           )}

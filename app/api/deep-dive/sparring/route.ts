@@ -103,7 +103,20 @@ export async function POST(request: Request) {
       riskNote: result.risk_note,
     });
 
-    return NextResponse.json({ ...result, assistant_text: normalizedAssistantText, sessionId: saved.sessionId });
+    return NextResponse.json({
+      sessionId: saved.sessionId,
+      assistant_text: normalizedAssistantText,
+      analysis_summary: result.analysis_summary,
+      recommendations: result.recommendations,
+      coach_feedback: result.coach_feedback,
+      next_options: result.next_options,
+      follow_up_question: result.follow_up_question,
+      roleplay_reply: result.roleplay_reply,
+      risk_note: result.risk_note,
+      mode: result.mode,
+      goal_progress: result.goal_progress,
+      context_refs: result.context_refs,
+    });
   } catch {
     return NextResponse.json({ error: "Failed to generate sparring turn" }, { status: 500 });
   }
