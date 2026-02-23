@@ -13,7 +13,7 @@ export default async function DeepDiveLayout({ children }: { children: React.Rea
         <article className="card">
           <p className="section-title">ログインが必要です</p>
           <p className="dd-muted">
-            Google Login でログインすると、あなたのデータのみ表示されます。ログアウト中はデータを表示しません。
+            Googleアカウントでログインすると、あなたのデータのみ表示されます。ログアウト中はデータを表示しません。
           </p>
         </article>
       </section>

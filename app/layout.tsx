@@ -5,8 +5,8 @@ import { getServerSessionSafe, isGoogleAuthEnabled } from "@/lib/auth";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Deep Dive | Communication Coach",
-  description: "People-aware communication coaching for daily situations.",
+  title: "DeepDive | Communication Coach",
+  description: "日常のコミュニケーションを振り返り、AIコーチと一緒に改善するジャーナリングアプリ。",
 };
 
 export default async function RootLayout({
