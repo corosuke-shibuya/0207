@@ -154,6 +154,7 @@ export function SparringClient({
                 alignItems: "center",
                 gap: 8,
                 opacity: option.value === "FACILITATION" ? 0.45 : 1,
+                flexWrap: "wrap",
               }}
             >
               <input
@@ -165,7 +166,7 @@ export function SparringClient({
                 disabled={option.value === "FACILITATION"}
               />
               <span>{option.label}</span>
-              <small className="muted">{option.helper}</small>
+              <span style={{ color: "#5a667b", fontSize: "0.96rem", lineHeight: 1.4 }}>{option.helper}</span>
             </label>
           ))}
         </div>
@@ -182,7 +183,9 @@ export function SparringClient({
             </select>
           </label>
           <div className="input-area" style={{ gap: 6, justifyContent: "flex-end" }}>
-            <small className="muted">必要なら本文にゴールを書いてください（例: 責任論に入らず合意形成したい）</small>
+            <small style={{ color: "#5a667b", fontSize: "0.96rem", lineHeight: 1.45 }}>
+              必要なら本文にゴールを書いてください（例: 責任論に入らず合意形成したい）
+            </small>
           </div>
         </div>
 
