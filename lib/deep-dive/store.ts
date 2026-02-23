@@ -467,8 +467,12 @@ export async function upsertSparringSession(input: {
   personId: string;
   goal?: string;
   scenario: string;
+  mode: "PRE_REFLECT" | "PRE_STRATEGY" | "FACILITATION";
   contextNoteIds: string[];
   turns: { role: "user" | "assistant"; content: string }[];
+  analysisSummary: string;
+  recommendations: string[];
+  followUpQuestion: string;
   goalProgress: "low" | "mid" | "high";
   nextOptions: string[];
   riskNote: string;
@@ -509,10 +513,14 @@ export async function upsertSparringSession(input: {
             sparring: {
               scenario: input.scenario,
               goal: input.goal,
+              mode: input.mode,
               turns: input.turns.map((turn) => ({
                 ...turn,
                 createdAt: new Date().toISOString(),
               })),
+              analysis_summary: input.analysisSummary,
+              recommendations: input.recommendations,
+              follow_up_question: input.followUpQuestion,
               goal_progress: input.goalProgress,
               next_options: input.nextOptions,
               risk_note: input.riskNote,
@@ -548,10 +556,14 @@ export async function upsertSparringSession(input: {
           sparring: {
             scenario: input.scenario,
             goal: input.goal,
+            mode: input.mode,
             turns: input.turns.map((turn) => ({
               ...turn,
               createdAt: new Date().toISOString(),
             })),
+            analysis_summary: input.analysisSummary,
+            recommendations: input.recommendations,
+            follow_up_question: input.followUpQuestion,
             goal_progress: input.goalProgress,
             next_options: input.nextOptions,
             risk_note: input.riskNote,

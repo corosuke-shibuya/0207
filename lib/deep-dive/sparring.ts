@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 import { getPerson, listNotes, listRecentSparringSnapshots } from "@/lib/deep-dive/store";
-import { Note, Person } from "@/lib/deep-dive/types";
+import { Note, Person, SparringMode } from "@/lib/deep-dive/types";
 
 type ChatTurn = {
   role: "user" | "assistant";
@@ -15,6 +15,10 @@ export type SparringContextRef = {
 };
 
 export type SparringResponse = {
+  mode: SparringMode;
+  analysis_summary: string;
+  recommendations: string[];
+  follow_up_question: string;
   roleplay_reply: string;
   coach_feedback: string;
   next_options: string[];
@@ -31,8 +35,28 @@ const RESPONSE_SCHEMA = {
   schema: {
     type: "object",
     additionalProperties: false,
-    required: ["roleplay_reply", "coach_feedback", "next_options", "risk_note", "goal_progress"],
+    required: [
+      "mode",
+      "analysis_summary",
+      "recommendations",
+      "follow_up_question",
+      "roleplay_reply",
+      "coach_feedback",
+      "next_options",
+      "risk_note",
+      "goal_progress",
+    ],
     properties: {
+      mode: {
+        type: "string",
+        enum: ["PRE_REFLECT", "PRE_STRATEGY", "FACILITATION"],
+      },
+      analysis_summary: { type: "string" },
+      recommendations: {
+        type: "array",
+        items: { type: "string" },
+      },
+      follow_up_question: { type: "string" },
       roleplay_reply: { type: "string" },
       coach_feedback: { type: "string" },
       next_options: {
@@ -80,7 +104,15 @@ function overlapRatio(a: string, b: string) {
 }
 
 function validateResponseShape(parsed: SparringResponse) {
-  if (!parsed.roleplay_reply?.trim() || !parsed.coach_feedback?.trim()) {
+  if (
+    !parsed.analysis_summary?.trim() ||
+    !parsed.roleplay_reply?.trim() ||
+    !parsed.coach_feedback?.trim()
+  ) {
+    return false;
+  }
+  const recommendations = (parsed.recommendations ?? []).filter((item) => item.trim().length > 0);
+  if (recommendations.length < 2) {
     return false;
   }
   const options = (parsed.next_options ?? []).filter((option) => option.trim().length > 0);
@@ -99,7 +131,7 @@ function evaluateQuality(params: {
   lastUser: string;
   previousAssistant: string;
 }) {
-  const combined = `${params.parsed.roleplay_reply}\n${params.parsed.coach_feedback}\n${params.parsed.next_options.join("\n")}`;
+  const combined = `${params.parsed.analysis_summary}\n${params.parsed.recommendations.join("\n")}\n${params.parsed.roleplay_reply}\n${params.parsed.coach_feedback}\n${params.parsed.next_options.join("\n")}`;
   const relevance =
     params.lastUser.trim().length < 8 ? 1 : overlapRatio(combined, params.lastUser);
   const repetition = params.previousAssistant
@@ -206,6 +238,7 @@ function pickBySeed<T>(items: T[], seedText: string): T {
 }
 
 function fallback(input: {
+  mode: SparringMode;
   goal: string;
   scenario: string;
   lastUser: string;
@@ -219,6 +252,7 @@ function fallback(input: {
   const shortUser = input.lastUser.trim().slice(0, 140) || "（まだ返信なし）";
   const hasQuestion = /[?？]/.test(input.lastUser);
   const hasStrongWords = /(退職|辞め|難しい|無理|避けたい|不安|懸念)/.test(input.lastUser);
+  const isVague = input.scenario.trim().length < 40 || input.lastUser.trim().length < 20;
   const replySeed = `${input.lastUser}|${input.scenario}|${input.goal}|${personLabel}|${input.previousAssistant}`;
   const questionReplies = [
     `${personLabel}の立場なら「質問には答える。加えて、結論と期限を明確にしてほしい」と返す可能性が高いです。`,
@@ -262,7 +296,41 @@ function fallback(input: {
       ];
   const coachFeedback = pickBySeed(coachingVariants, `${replySeed}|coach`);
 
+  const modeLabel = {
+    PRE_REFLECT: "事前振り返り",
+    PRE_STRATEGY: "事前戦略",
+    FACILITATION: "ファシリ支援",
+  } as const;
+
+  const modeRecommendations = {
+    PRE_REFLECT: [
+      "直近の失敗要因を「事実」「解釈」「感情」に分けて1行ずつ整理する。",
+      "次の会話で変える点を1つだけ決め、最初の30秒で実行する言い回しを先に用意する。",
+      "相手が防衛的になりそうな論点を1つ決め、先回りの一言を準備する。",
+    ],
+    PRE_STRATEGY: [
+      "結論→理由2点→確認事項の順で話す下書きを先に作る。",
+      "相手に選ばせる選択肢を2案に絞り、どちらを推すか明示する。",
+      "反論されやすい点を1つだけ先出しし、対処案を添える。",
+    ],
+    FACILITATION: [
+      "会議冒頭で「今日決めること・決めないこと」を1分で宣言する。",
+      "論点を『方向性 / 戦略 / 戦術』の3層に分け、今どこを話しているか固定する。",
+      "発言が散ったら、論点に戻す問いを1つだけ繰り返す。",
+    ],
+  } as const;
+
+  const followUp = isVague
+    ? "一般論を避けるために1点だけ教えてください。今回いちばん避けたい失敗は何ですか？"
+    : input.mode === "FACILITATION"
+      ? "次回会議で、あなたが最初の1分で置ける論点整理は何にしますか？"
+      : "この案を実行する場面は、1on1・定例会議・チャットのどれですか？";
+
   return {
+    mode: input.mode,
+    analysis_summary: `${modeLabel[input.mode]}として見ると、直近発話は「${shortUser}」で、主論点は${hasStrongWords ? "リスク処理と意思決定" : "伝達順序と合意形成"}です。`,
+    recommendations: modeRecommendations[input.mode].slice(0, 3),
+    follow_up_question: followUp,
     roleplay_reply: `${dynamicReply}\n\nあなたの直近発言: ${shortUser}`,
     coach_feedback: coachFeedback,
     next_options: [optionA, optionB, optionC],
@@ -293,6 +361,7 @@ export async function generateSparringTurn(input: {
   personId: string;
   goal: string;
   scenario: string;
+  mode: SparringMode;
   history: ChatTurn[];
   contextNoteIds?: string[];
 }): Promise<SparringResponse> {
@@ -323,6 +392,7 @@ export async function generateSparringTurn(input: {
   if (!client) {
     return {
       ...fallback({
+        mode: input.mode,
         goal: input.goal,
         scenario: input.scenario,
         lastUser,
@@ -335,11 +405,17 @@ export async function generateSparringTurn(input: {
 
   const prompt = [
     "あなたはコミュニケーション壁打ちコーチ。",
+    `現在モード: ${input.mode}（PRE_REFLECT=事前振り返り, PRE_STRATEGY=事前戦略, FACILITATION=ファシリ支援）`,
+    "回答は常にユーザー固有文脈ベース。一般的なマネージャー論・テンプレ論は禁止。",
+    "情報不足なら推測で埋めず、follow_up_question で1つだけ具体質問を返す。",
+    "曖昧な一般論（例: 〜の可能性があります）だけで終えない。",
     "1) 相手役としてリアルな返答を1つ作る。",
     "2) コーチとして改善ポイントを短く返す。",
-    "3) 次に言う一言の選択肢を3つ返す（互いに意図が異なる案にする）。",
+    "3) analysis_summary に状況分析を短く入れる。",
+    "4) recommendations に次アクションを2〜3件入れる。",
+    "5) 次に言う一言の選択肢を3つ返す（互いに意図が異なる案にする）。",
     "禁止: 攻撃・威圧・不誠実な誘導。",
-    "会話は実務的、短く、次に動ける形で。",
+    "会話は実務的・中程度の長さ・次に動ける形。寄り添いは軽め。",
     "最重要: 直近ユーザー発話に必ず具体的に反応し、前回と同じ文を繰り返さない。",
     "roleplay_reply と coach_feedback の冒頭1文は、直近ユーザー発話の要点を言い換えてから始める。",
     "相手傾向に合わせて、語調・長さ・判断の進め方を調整する。",
@@ -391,6 +467,7 @@ export async function generateSparringTurn(input: {
         }
         return {
           ...parsed,
+          recommendations: (parsed.recommendations ?? []).slice(0, 3),
           next_options: (parsed.next_options ?? []).slice(0, 3),
           context_refs: contextRefs,
         };
@@ -402,6 +479,7 @@ export async function generateSparringTurn(input: {
 
   return {
     ...fallback({
+      mode: input.mode,
       goal: input.goal,
       scenario: input.scenario,
       lastUser,

@@ -34,6 +34,25 @@ export default async function SessionDetailPage({ params }: Props) {
         {sparring ? (
           <>
             <p className="section-title">壁打ちログ</p>
+            {sparring.analysis_summary ? (
+              <div className="chat-bubble" style={{ marginTop: 10 }}>
+                <strong>分析結果</strong>
+                <p>{sparring.analysis_summary}</p>
+              </div>
+            ) : null}
+            {sparring.recommendations && sparring.recommendations.length > 0 ? (
+              <div className="chat-bubble" style={{ marginTop: 10 }}>
+                <strong>推奨行動（改善案）</strong>
+                {sparring.recommendations.map((item, index) => (
+                  <p key={`${item}-${index}`}>{index + 1}. {item}</p>
+                ))}
+              </div>
+            ) : null}
+            {sparring.follow_up_question ? (
+              <p className="dd-muted" style={{ marginTop: 10 }}>
+                確認質問: {sparring.follow_up_question}
+              </p>
+            ) : null}
             <p className="dd-muted">進捗: {sparring.goal_progress ?? "low"}</p>
             <div className="timeline dd-chat-log" style={{ marginTop: 10 }}>
               {sparring.turns.map((turn, index) => (

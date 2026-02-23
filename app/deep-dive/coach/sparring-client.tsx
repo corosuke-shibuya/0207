@@ -23,9 +23,17 @@ type RecentSession = {
   inputText: string;
 };
 
+type SparringMode = "PRE_REFLECT" | "PRE_STRATEGY" | "FACILITATION";
+
 const QUICK_SUGGESTIONS = [
   "明日の上司とのミーティング、どう準備したらいい?",
   "メンバーをイライラさせてしまった原因は?",
+];
+
+const MODE_OPTIONS: { value: SparringMode; label: string; helper: string }[] = [
+  { value: "PRE_REFLECT", label: "A. 事前振り返り", helper: "直近のズレ要因を整理して、次で直す点を絞る" },
+  { value: "PRE_STRATEGY", label: "B. 事前戦略", helper: "相手に合わせた伝え方・順序・選択肢を作る" },
+  { value: "FACILITATION", label: "C. ファシリ支援", helper: "会議の論点整理と進行の詰まりを解消する" },
 ];
 
 export function SparringClient({
@@ -36,6 +44,7 @@ export function SparringClient({
   recentSessions: RecentSession[];
 }) {
   const [personId, setPersonId] = useState(people[0]?.id ?? "");
+  const [mode, setMode] = useState<SparringMode>("PRE_STRATEGY");
   const [goal, setGoal] = useState("");
   const [scenario, setScenario] = useState("");
   const [input, setInput] = useState("");
@@ -72,6 +81,7 @@ export function SparringClient({
       body: JSON.stringify({
         sessionId,
         personId,
+        mode,
         goal,
         scenario,
         history: nextHistory.map((turn) => ({ role: turn.role, content: turn.content })),
@@ -98,10 +108,12 @@ export function SparringClient({
     if (prefill && !scenario.trim()) {
       setScenario(prefill);
     }
-    const bootPrompt = [
-      "この状況について、まず最初に私へフィードバックしてください。",
-      "次に、相手が返してきそうな反応と私の改善ポイントを簡潔にください。",
-    ].join(" ");
+    const bootPromptMap: Record<SparringMode, string> = {
+      PRE_REFLECT: "この状況で自分の改善ポイントを先に分析し、次回の改善行動を具体化してください。",
+      PRE_STRATEGY: "この状況で相手タイプに合わせた事前戦略を作ってください。一般論ではなく私の文脈でお願いします。",
+      FACILITATION: "この状況で議論を前進させるためのファシリ支援をしてください。論点整理からお願いします。",
+    };
+    const bootPrompt = bootPromptMap[mode];
     setHistory([]);
     setSessionId(null);
     await sendTurn(bootPrompt, { hideUser: true });
@@ -159,6 +171,17 @@ export function SparringClient({
 
         <div className="grid-2">
           <label className="input-area" style={{ gap: 6 }}>
+            <span>相談モード</span>
+            <select value={mode} onChange={(event) => setMode(event.target.value as SparringMode)}>
+              {MODE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <small className="muted">{MODE_OPTIONS.find((option) => option.value === mode)?.helper}</small>
+          </label>
+          <label className="input-area" style={{ gap: 6 }}>
             <span>相談する相手</span>
             <select value={personId} onChange={(event) => setPersonId(event.target.value)}>
               {people.map((person) => (
@@ -193,6 +216,7 @@ export function SparringClient({
             </Link>
           ) : null}
         </div>
+        {error ? <p className="muted" style={{ marginTop: 8 }}>{error}</p> : null}
       </article>
 
       <article className="card">
@@ -212,17 +236,18 @@ export function SparringClient({
           )}
         </div>
 
-        <div className="input-area" style={{ marginTop: 14 }}>
-          <textarea
-            value={input}
-            onChange={(event) => setInput(event.target.value)}
-            placeholder="追加で伝えたいことを書く"
-          />
-          <button className="primary-button" type="button" disabled={!canSend} onClick={() => sendTurn()}>
-            {loading ? "返信生成中..." : "返信する"}
-          </button>
-          {error ? <p className="muted">{error}</p> : null}
-        </div>
+        {history.some((turn) => turn.role === "assistant") ? (
+          <div className="input-area" style={{ marginTop: 14 }}>
+            <textarea
+              value={input}
+              onChange={(event) => setInput(event.target.value)}
+              placeholder="追加で伝えたいことを書く"
+            />
+            <button className="primary-button" type="button" disabled={!canSend} onClick={() => sendTurn()}>
+              {loading ? "返信生成中..." : "返信する"}
+            </button>
+          </div>
+        ) : null}
       </article>
 
       <article className="card">

@@ -69,10 +69,16 @@ export type SparringSummary = {
   generatedAt?: string;
 };
 
+export type SparringMode = "PRE_REFLECT" | "PRE_STRATEGY" | "FACILITATION";
+
 export type SparringState = {
   scenario: string;
   goal?: string;
+  mode?: SparringMode;
   turns: SparringTurn[];
+  analysis_summary?: string;
+  recommendations?: string[];
+  follow_up_question?: string;
   goal_progress?: "low" | "mid" | "high";
   next_options?: string[];
   risk_note?: string;

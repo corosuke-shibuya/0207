@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { generateSparringTurn } from "@/lib/deep-dive/sparring";
 import { pickContextNoteIds } from "@/lib/deep-dive/context";
 import { upsertSparringSession } from "@/lib/deep-dive/store";
+import { SparringMode } from "@/lib/deep-dive/types";
 
 type ChatTurn = {
   role: "user" | "assistant";
@@ -15,12 +16,15 @@ export async function POST(request: Request) {
       personId?: unknown;
       goal?: unknown;
       scenario?: unknown;
+      mode?: unknown;
       history?: unknown;
     };
     const sessionId = typeof body?.sessionId === "string" ? body.sessionId.trim() : "";
     const personId = typeof body?.personId === "string" ? body.personId.trim() : "";
     const goal = typeof body?.goal === "string" ? body.goal.trim() : "";
     const scenario = typeof body?.scenario === "string" ? body.scenario.trim() : "";
+    const mode: SparringMode =
+      body?.mode === "PRE_REFLECT" || body?.mode === "FACILITATION" ? body.mode : "PRE_STRATEGY";
     const rawHistory = Array.isArray(body?.history) ? body.history : [];
     const history: ChatTurn[] = rawHistory
       .map((turn: unknown) => {
@@ -43,19 +47,37 @@ export async function POST(request: Request) {
       personId,
       goal,
       scenario,
+      mode,
       history,
       contextNoteIds,
     });
 
-    const assistantText = `相手役: ${result.roleplay_reply}\n\nコーチ: ${result.coach_feedback}`;
+    const assistantText = [
+      `分析: ${result.analysis_summary}`,
+      "",
+      "推奨行動:",
+      ...result.recommendations.map((item, index) => `${index + 1}. ${item}`),
+      "",
+      result.follow_up_question ? `確認質問: ${result.follow_up_question}` : "",
+      "",
+      `相手の反応見立て: ${result.roleplay_reply}`,
+      "",
+      `コーチ補足: ${result.coach_feedback}`,
+    ]
+      .filter(Boolean)
+      .join("\n");
     const turns = [...history, { role: "assistant" as const, content: assistantText }];
     const saved = await upsertSparringSession({
       sessionId: sessionId || undefined,
       personId,
       goal,
       scenario,
+      mode,
       contextNoteIds,
       turns,
+      analysisSummary: result.analysis_summary,
+      recommendations: result.recommendations,
+      followUpQuestion: result.follow_up_question,
       goalProgress: result.goal_progress,
       nextOptions: result.next_options,
       riskNote: result.risk_note,

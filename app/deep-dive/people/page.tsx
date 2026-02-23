@@ -42,7 +42,7 @@ export default async function PeoplePage() {
       </article>
 
       <article className="card">
-        <p className="section-title">People</p>
+        <p className="section-title">関係者一覧</p>
         <div className="timeline">
           {people.length === 0 ? (
             <p className="dd-muted">まだ相手が登録されていません。</p>
