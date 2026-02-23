@@ -110,16 +110,7 @@ function validateResponseShape(parsed: SparringResponse) {
   if (parsed.mode === "FACILITATION" && !parsed.roleplay_reply?.trim()) {
     return false;
   }
-  const recommendations = (parsed.recommendations ?? []).filter((item) => item.trim().length > 0);
-  if (recommendations.length < 2) {
-    return false;
-  }
-  const options = (parsed.next_options ?? []).filter((option) => option.trim().length > 0);
-  if (options.length < 2) {
-    return false;
-  }
-  const uniqueOptions = new Set(options.map((option) => normalizeForCompare(option)));
-  if (uniqueOptions.size < 2) {
+  if (parsed.coach_feedback.trim().length < 100) {
     return false;
   }
   return true;
@@ -130,7 +121,7 @@ function evaluateQuality(params: {
   lastUser: string;
   previousAssistant: string;
 }) {
-  const combined = `${params.parsed.analysis_summary}\n${params.parsed.recommendations.join("\n")}\n${params.parsed.roleplay_reply}\n${params.parsed.coach_feedback}\n${params.parsed.next_options.join("\n")}`;
+  const combined = `${params.parsed.coach_feedback}\n${params.parsed.roleplay_reply}`;
   const relevance =
     params.lastUser.trim().length < 8 ? 1 : overlapRatio(combined, params.lastUser);
   const repetition = params.previousAssistant
@@ -265,6 +256,8 @@ function buildUserGuidance(userProfile: UserProfile | null) {
 
   return [
     "【ユーザー自身の特性】",
+    `ユーザーの名前: ${userProfile.name}`,
+    "回答内で「ユーザーは」ではなく、名前で呼ぶこと。",
     priorityMap[a.priority],
     directnessMap[a.directness],
     verbosityMap[a.verbosity],
@@ -375,16 +368,24 @@ function fallback(input: {
     ? "一般論を避けるために1点だけ教えてください。今回いちばん避けたい失敗は何ですか？"
     : input.mode === "FACILITATION"
       ? "次回会議で、あなたが最初の1分で置ける論点整理は何にしますか？"
-      : "この案を実行する場面は、1on1・定例会議・チャットのどれですか？";
+      : "";
+
+  const mergedFeedback = [
+    `この状況では、${shortUser}という論点に対して、**相手の判断軸に合わせた順序設計**が重要です。`,
+    `特に${personLabel}は${input.person.typeAxes.priority === "logic" ? "整合性" : input.person.typeAxes.priority === "risk" ? "リスク回避" : "意思決定の速さ"}を重視しやすいため、先に結論と判断材料を置き、その後に背景を添える流れが有効です。`,
+    `たとえば一言目は「${optionA}」のように切り出し、次に「${optionB}」の形で合意形成を進めると、責任論に寄り道しにくくなります。`,
+    `さらに相手が反応しづらい場合は「${optionC}」の問いで意思決定ポイントを絞ると、会話を前に進めやすくなります。`,
+    `最後に、今回のズレを再発させないために、**次回は事実・打ち手・確認事項の3点を30秒で置く**ことを意識してください。`,
+  ].join("\n\n");
 
   return {
     mode: input.mode,
     analysis_summary: `${modeLabel[input.mode]}として見ると、直近発話は「${shortUser}」で、主論点は${hasStrongWords ? "リスク処理と意思決定" : "伝達順序と合意形成"}です。`,
-    recommendations: modeRecommendations[input.mode].slice(0, 3),
+    recommendations: input.mode === "FACILITATION" ? modeRecommendations[input.mode].slice(0, 3) : [],
     follow_up_question: followUp,
-    roleplay_reply: `${dynamicReply}\n\nあなたの直近発言: ${shortUser}`,
-    coach_feedback: coachFeedback,
-    next_options: [optionA, optionB, optionC],
+    roleplay_reply: input.mode === "FACILITATION" ? `${dynamicReply}\n\nあなたの直近発言: ${shortUser}` : "",
+    coach_feedback: input.mode === "FACILITATION" ? coachFeedback : mergedFeedback,
+    next_options: input.mode === "FACILITATION" ? [optionA, optionB, optionC] : [],
     risk_note: `目的「${input.goal || "未設定"}」に対して、意図が強すぎる表現は政治的リスクになります。`,
     goal_progress: input.lastUser.length > 80 ? "high" : input.lastUser.length > 30 ? "mid" : "low",
     context_refs: [],
@@ -476,36 +477,46 @@ export async function generateSparringTurn(input: {
     ...({
       PRE_REFLECT: [
         "【モード: 事前振り返り】",
-        "このモードでは相手役ロールプレイはしない。roleplay_reply は空文字 \"\" にすること。",
-        "ユーザーの状況を深く分析し、analysis_summary に固有の事実・人物名・詰まりポイントを書く。",
-        "coach_feedback でユーザーの思考の整理を手助けする。「なぜズレたか→どう直すか→次の一言例」の構成。",
-        "recommendations に次アクションを2〜3件入れる。",
-        "next_options は「ユーザーが次に考えるべき問い」または「次に取れるアプローチの選択肢」を3つ提示する。",
+        "roleplay_reply は空文字にする。",
+        "coach_feedback に回答のすべてを入れる。以下の要素を自然な文章として統合すること：",
+        "- 状況の分析（固有名詞・事実・詰まりポイント必須）",
+        "- なぜ今のアプローチがズレているか",
+        "- 具体的な改善策（2-3個）",
+        "- 次に相手に言う一言の例（2-3個）",
+        "これらを固定の見出しや箇条書きで区切らず、自然な文章の流れの中に溶け込ませる。",
+        "ただし重要なポイントは **太字（Markdown）** で強調すること。",
+        "recommendations, next_options は空配列 [] にする。",
       ],
       PRE_STRATEGY: [
         "【モード: 事前戦略】",
-        "このモードでは相手役ロールプレイはしない。roleplay_reply は空文字 \"\" にすること。",
-        "状況を踏まえた具体的な作戦を recommendations に書く。",
-        "coach_feedback で作戦の弱点と補強案を示す。",
-        "next_options は「相手に言う一言目の候補」を意図が異なる3案で提示する。",
-        "analysis_summary に状況分析を短く入れる。",
+        "roleplay_reply は空文字にする。",
+        "coach_feedback に回答のすべてを入れる。以下の要素を自然な文章として統合すること：",
+        "- 状況の分析",
+        "- この相手に対して有効な作戦",
+        "- 具体的な改善策（2-3個）",
+        "- 次に相手に言う一言の例（2-3個）",
+        "これらを固定の見出しや箇条書きで区切らず、自然な文章の流れの中に溶け込ませる。",
+        "ただし重要なポイントは **太字（Markdown）** で強調すること。",
+        "recommendations, next_options は空配列 [] にする。",
       ],
       FACILITATION: [
         "【モード: ファシリ支援】",
-        "相手役として1つだけ返答する。それを roleplay_reply に入れる。コーチとしてのメタ解説は roleplay_reply に混ぜない。",
-        "coach_feedback はユーザー発言へのフィードバックのみ。相手役のセリフは含めない。",
-        "analysis_summary は最小限でよい。",
-        "recommendations に次アクションを2〜3件入れる。",
-        "next_options は「ユーザーが次に相手に言う一言の候補」を3つ提示する。",
+        "roleplay_reply に相手役のセリフのみを入れる。コーチ解説は混ぜない。",
+        "coach_feedback にフィードバックを自然な文章で入れる。",
+        "recommendations, next_options は空配列 [] にする。",
       ],
     } satisfies Record<SparringMode, string[]>)[input.mode],
     "回答は常にユーザー固有文脈ベース。一般的なマネージャー論・テンプレ論は禁止。",
+    "回答は自然な文章で書く。毎回同じ構造にしない。",
+    "文脈に応じて太字（**Markdown**）、箇条書き、段落分けを自由に使う。",
+    "ただし毎回箇条書きを使うのは禁止。文章の流れで伝える方を優先する。",
+    "2往復目以降は、前回の助言からの進展・変化点を冒頭で明示すること。前回と同じ助言の繰り返しは禁止。新たに深掘りした部分や視点の変化を **太字** で強調すること。",
     "follow_up_question は情報が不足している場合のみ1つだけ具体質問を返す。ユーザーの入力で状況・目的・相手が十分に把握できる場合は空文字 \"\" にすること。会話が2往復以上進んだ後は、追加質問よりも具体的な助言を優先する。",
     "曖昧な一般論（例: 〜の可能性があります）だけで終えない。",
     "roleplay_reply はFACILITATIONモード以外では空文字 \"\" を返すこと。ロールプレイ要素を他フィールドに混入させないこと。",
-    "coach_feedback は浅い感想禁止。必ず『なぜズレたか→どう直すか→次の一言例』まで書く。",
+    "coach_feedback は浅い感想禁止。必ず状況分析と改善提案を含めること。",
     "analysis_summary は今回の状況固有名詞・事実・詰まりポイントを必ず含める。",
-    "analysis_summary + coach_feedback + recommendations + roleplay_reply の合計は、日本語で500〜2000字に収める。",
+    "coach_feedback + roleplay_reply の合計は、日本語で500〜2000字に収める。",
     "禁止: 攻撃・威圧・不誠実な誘導。",
     "会話は実務的・中程度の長さ・次に動ける形。寄り添いは軽め。",
     "最重要: 直近ユーザー発話に必ず具体的に反応し、前回と同じ文を繰り返さない。",
@@ -560,8 +571,8 @@ export async function generateSparringTurn(input: {
         }
         return {
           ...parsed,
-          recommendations: (parsed.recommendations ?? []).slice(0, 3),
-          next_options: (parsed.next_options ?? []).slice(0, 3),
+          recommendations: parsed.mode === "FACILITATION" ? (parsed.recommendations ?? []).slice(0, 3) : [],
+          next_options: parsed.mode === "FACILITATION" ? (parsed.next_options ?? []).slice(0, 3) : [],
           context_refs: contextRefs,
         };
       }

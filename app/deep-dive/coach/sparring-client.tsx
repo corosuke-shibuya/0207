@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import ReactMarkdown from "react-markdown";
 
 type PersonOption = {
   id: string;
@@ -60,39 +61,19 @@ function SparringResponseView({ data }: { data: SparringData }) {
         </div>
       )}
 
-      {data.coach_feedback.trim() && <p style={{ margin: 0, lineHeight: 1.8 }}>{data.coach_feedback}</p>}
-
-      {data.recommendations.length > 0 && (
-        <div
-          style={{
-            background: "#f0fdf4",
-            borderRadius: 12,
-            padding: "14px 18px",
-          }}
-        >
-          <p style={{ fontSize: "0.85rem", color: "#15803d", fontWeight: 700, marginBottom: 8 }}>
-            おすすめアクション
-          </p>
-          <ul style={{ margin: 0, paddingLeft: 0, listStyle: "none", lineHeight: 1.8 }}>
-            {data.recommendations.map((item, i) => (
-              <li key={i} style={{ marginBottom: 4 }}>
-                {item}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {data.next_options.length > 0 && (
-        <div style={{ background: "#f7f8fa", borderRadius: 12, padding: "14px 18px" }}>
-          <p style={{ fontSize: "0.85rem", color: "#5a667b", fontWeight: 700, marginBottom: 8 }}>
-            🗣️ こんな切り出し方があります
-          </p>
-          <ul style={{ margin: 0, paddingLeft: 20, lineHeight: 1.8 }}>
-            {data.next_options.map((option, i) => (
-              <li key={i} style={{ color: "#374151" }}>{option}</li>
-            ))}
-          </ul>
+      {data.coach_feedback.trim() && (
+        <div className="dd-message-text" style={{ lineHeight: 1.8 }}>
+          <ReactMarkdown
+            components={{
+              strong: ({ children }) => <strong style={{ color: "#1d4ed8" }}>{children}</strong>,
+              p: ({ children }) => <p style={{ margin: "0 0 12px 0" }}>{children}</p>,
+              ul: ({ children }) => <ul style={{ margin: "8px 0", paddingLeft: 20 }}>{children}</ul>,
+              ol: ({ children }) => <ol style={{ margin: "8px 0", paddingLeft: 20 }}>{children}</ol>,
+              li: ({ children }) => <li style={{ marginBottom: 4 }}>{children}</li>,
+            }}
+          >
+            {data.coach_feedback}
+          </ReactMarkdown>
         </div>
       )}
 
