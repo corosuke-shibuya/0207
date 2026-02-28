@@ -1,8 +1,6 @@
 import { upsertUserProfileAction } from "@/app/deep-dive/actions";
 import { getUserProfile } from "@/lib/deep-dive/store";
 
-export const dynamic = "force-dynamic";
-
 const PROFILE_QUESTIONS = [
   {
     key: "priority",

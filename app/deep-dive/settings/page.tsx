@@ -1,8 +1,6 @@
 import { ResetButton } from "@/app/deep-dive/settings/reset-button";
 import { exportAllData } from "@/lib/deep-dive/store";
 
-export const dynamic = "force-dynamic";
-
 export default async function SettingsPage() {
   const exportPreview = JSON.stringify(await exportAllData(), null, 2);
 

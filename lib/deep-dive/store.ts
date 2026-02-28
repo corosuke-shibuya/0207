@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import { getServerSessionSafe, isGoogleAuthEnabled } from "@/lib/auth";
 import { DEFAULT_AXES } from "@/lib/deep-dive/person-presets";
@@ -45,22 +46,39 @@ function toIso(value: Date) {
 
 async function ensureUserIdByEmail(email?: string | null, name?: string | null) {
   const normalizedEmail = email?.toLowerCase().trim() || DEMO_EMAIL;
-  const user = await prisma.user.upsert({
+  const existingUser = await prisma.user.findUnique({
     where: { email: normalizedEmail },
-    update: { name: name || undefined },
-    create: { email: normalizedEmail, name: name || "Deep Dive Demo" },
     select: { id: true },
   });
-  return user.id;
+  if (existingUser) {
+    return existingUser.id;
+  }
+
+  try {
+    const createdUser = await prisma.user.create({
+      data: { email: normalizedEmail, name: name || "Deep Dive Demo" },
+      select: { id: true },
+    });
+    return createdUser.id;
+  } catch {
+    const user = await prisma.user.findUnique({
+      where: { email: normalizedEmail },
+      select: { id: true },
+    });
+    if (!user) {
+      throw new Error("User lookup failed");
+    }
+    return user.id;
+  }
 }
 
-async function getCurrentUserId() {
+const getCurrentUserId = cache(async function getCurrentUserId() {
   const session = await getServerSessionSafe();
   if (isGoogleAuthEnabled() && !session?.user?.email) {
     throw new Error(AUTH_REQUIRED_ERROR);
   }
   return ensureUserIdByEmail(session?.user?.email, session?.user?.name);
-}
+});
 
 async function withPersistence<T>(prismaWork: () => Promise<T>, fallback: () => T | Promise<T>): Promise<T> {
   if (!hasPrismaConnection()) {
@@ -354,6 +372,50 @@ export async function attachArtifact(sessionId: string, payload: ArtifactPayload
       createdAt: toIso(row.createdAt),
     };
   }, () => memoryAttachArtifact(sessionId, payload, model));
+}
+
+export type SessionSummary = {
+  id: string;
+  kind: SessionKind;
+  personId: string;
+  inputText: string;
+  createdAt: string;
+};
+
+export async function listSessionSummaries(limit = 20): Promise<SessionSummary[]> {
+  return withPersistence(async () => {
+    const userId = await getCurrentUserId();
+
+    const rows = await prisma.coachingSession.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      take: limit,
+      select: {
+        id: true,
+        kind: true,
+        personId: true,
+        inputText: true,
+        createdAt: true,
+      },
+    });
+
+    return rows.map((row) => ({
+      id: row.id,
+      kind: row.kind,
+      personId: row.personId,
+      inputText: row.inputText,
+      createdAt: toIso(row.createdAt),
+    }));
+  }, async () => {
+    const sessions = await memoryListSessions();
+    return sessions.slice(0, limit).map((session) => ({
+      id: session.id,
+      kind: session.kind,
+      personId: session.personId,
+      inputText: session.inputText,
+      createdAt: session.createdAt,
+    }));
+  });
 }
 
 export async function listSessions(): Promise<CoachingSession[]> {

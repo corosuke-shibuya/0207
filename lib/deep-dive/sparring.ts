@@ -448,12 +448,12 @@ export async function generateSparringTurn(input: {
     scenario: item.scenario,
   }));
 
-  const allNotes = await listNotes(80);
+  const allNotes = await listNotes(30);
   const contextNotes = (input.contextNoteIds ?? [])
     .map((id) => allNotes.find((note) => note.id === id))
     .filter((note): note is Note => Boolean(note))
-    .slice(0, 4)
-    .map((note) => ({ id: note.id, body: note.body.slice(0, 160), createdAt: note.createdAt }));
+    .slice(0, 3)
+    .map((note) => ({ id: note.id, body: note.body.slice(0, 100), createdAt: note.createdAt }));
 
   const lastUser = [...input.history].reverse().find((turn) => turn.role === "user")?.content ?? "";
   const previousAssistant = [...input.history].reverse().find((turn) => turn.role === "assistant")?.content ?? "";
@@ -526,17 +526,17 @@ export async function generateSparringTurn(input: {
       recent.map((item) => ({
         date: item.createdAt,
         goal: item.goal,
-        scenario: item.scenario.slice(0, 120),
-        lastUser: item.lastUser.slice(0, 120),
-        lastAssistant: item.lastAssistant.slice(0, 120),
+        scenario: item.scenario.slice(0, 80),
+        lastUser: item.lastUser.slice(0, 80),
+        lastAssistant: item.lastAssistant.slice(0, 80),
         risk: item.riskNote,
       })),
     )}`,
     `直近ユーザー発話: ${lastUser}`,
-    `履歴: ${JSON.stringify(input.history.slice(-8))}`,
+    `履歴: ${JSON.stringify(input.history.slice(-4))}`,
   ].join("\n");
 
-  for (let i = 0; i < 3; i += 1) {
+  for (let i = 0; i < 2; i += 1) {
     const strictHint = i > 0 ? "厳密JSONのみ返してください。" : "";
     const retryHint =
       i === 0

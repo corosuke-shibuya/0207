@@ -1,7 +1,5 @@
 import { listNotes } from "@/lib/deep-dive/store";
 
-export const dynamic = "force-dynamic";
-
 function calcScore(total: number) {
   if (total >= 10) return 88;
   if (total >= 6) return 78;

@@ -3,8 +3,6 @@ import { HomeNoteForm } from "@/app/deep-dive/home-note-form";
 import { getServerSessionSafe } from "@/lib/auth";
 import { listNotes } from "@/lib/deep-dive/store";
 
-export const dynamic = "force-dynamic";
-
 type Props = {
   searchParams: Promise<{ error?: string }>;
 };
