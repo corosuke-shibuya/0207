@@ -118,4 +118,5 @@ export async function upsertUserProfileAction(formData: FormData) {
   });
   revalidatePath("/deep-dive/profile");
   revalidatePath("/deep-dive/coach");
+  redirect("/deep-dive/profile?saved=1");
 }

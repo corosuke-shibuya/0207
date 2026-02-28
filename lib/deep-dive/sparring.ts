@@ -18,6 +18,7 @@ export type SparringResponse = {
   mode: SparringMode;
   analysis_summary: string;
   recommendations: string[];
+  user_pattern: string;
   follow_up_question: string;
   roleplay_reply: string;
   coach_feedback: string;
@@ -39,6 +40,7 @@ const RESPONSE_SCHEMA = {
       "mode",
       "analysis_summary",
       "recommendations",
+      "user_pattern",
       "follow_up_question",
       "roleplay_reply",
       "coach_feedback",
@@ -56,6 +58,7 @@ const RESPONSE_SCHEMA = {
         type: "array",
         items: { type: "string" },
       },
+      user_pattern: { type: "string" },
       follow_up_question: { type: "string" },
       roleplay_reply: { type: "string" },
       coach_feedback: { type: "string" },
@@ -104,7 +107,7 @@ function overlapRatio(a: string, b: string) {
 }
 
 function validateResponseShape(parsed: SparringResponse) {
-  if (!parsed.analysis_summary?.trim() || !parsed.coach_feedback?.trim()) {
+  if (!parsed.analysis_summary?.trim() || !parsed.coach_feedback?.trim() || !parsed.user_pattern?.trim()) {
     return false;
   }
   if (parsed.mode === "FACILITATION" && !parsed.roleplay_reply?.trim()) {
@@ -130,7 +133,7 @@ function evaluateQuality(params: {
   lastUser: string;
   previousAssistant: string;
 }) {
-  const combined = `${params.parsed.analysis_summary}\n${params.parsed.recommendations.join("\n")}\n${params.parsed.roleplay_reply}\n${params.parsed.coach_feedback}\n${params.parsed.next_options.join("\n")}`;
+  const combined = `${params.parsed.analysis_summary}\n${params.parsed.user_pattern}\n${params.parsed.recommendations.join("\n")}\n${params.parsed.roleplay_reply}\n${params.parsed.coach_feedback}\n${params.parsed.next_options.join("\n")}`;
   const relevance =
     params.lastUser.trim().length < 8 ? 1 : overlapRatio(combined, params.lastUser);
   const repetition = params.previousAssistant
@@ -383,6 +386,10 @@ function fallback(input: {
     mode: input.mode,
     analysis_summary: `${modeLabel[input.mode]}として見ると、直近発話は「${shortUser}」で、主論点は${hasStrongWords ? "リスク処理と意思決定" : "伝達順序と合意形成"}です。`,
     recommendations: modeRecommendations[input.mode].slice(0, 3),
+    user_pattern:
+      axes.verbosity === "short"
+        ? "あなたは要点を先に置ける一方で、背景や感情の補足が薄く見えやすい傾向があります。今回も『伝えるべき事実』は整理できていますが、相手がどう受け取るかまで先回りして言葉を整える余地があります。"
+        : "あなたは背景まで丁寧に考える一方で、論点を広げすぎて相手にとっての要点が遅れて見えやすい傾向があります。今回も状況理解は深いですが、何を先に伝えるかの取捨選択が重要です。",
     follow_up_question: followUp,
     roleplay_reply: input.mode === "FACILITATION" ? `${dynamicReply}\n\nあなたの直近発言: ${shortUser}` : "",
     coach_feedback: coachFeedback,
@@ -481,6 +488,7 @@ export async function generateSparringTurn(input: {
         "roleplay_reply は空文字 \"\" にすること。",
         "ユーザーの状況を深く分析し、analysis_summary に固有の事実・人物名・詰まりポイントを書く。",
         "coach_feedback でユーザーの思考の整理を手助けする。「なぜズレたか→どう直すか→次の一言例」の構成。",
+        "user_pattern に、今回の相談で見えているユーザー自身のコミュニケーション特徴・癖・盲点を2〜4文で書く。一般論は禁止。",
         "recommendations に次アクションを2〜3件入れる。",
         "next_options は「ユーザーが次に考えるべき問い」または「次に取れるアプローチの選択肢」を3つ提示する。",
       ],
@@ -489,6 +497,7 @@ export async function generateSparringTurn(input: {
         "roleplay_reply は空文字 \"\" にすること。",
         "状況を踏まえた具体的な作戦を recommendations に書く。",
         "coach_feedback で作戦の弱点と補強案を示す。",
+        "user_pattern に、今回の相談で見えているユーザー自身のコミュニケーション特徴・癖・盲点を2〜4文で書く。一般論は禁止。",
         "next_options は「相手に言う一言目の候補」を意図が異なる3案で提示する。",
         "analysis_summary に状況分析を短く入れる。",
       ],
@@ -496,6 +505,7 @@ export async function generateSparringTurn(input: {
         "【モード: ファシリ支援】",
         "相手役として1つだけ返答する。それを roleplay_reply に入れる。コーチとしてのメタ解説は roleplay_reply に混ぜない。",
         "coach_feedback はユーザー発言へのフィードバックのみ。相手役のセリフは含めない。",
+        "user_pattern に、今回の相談で見えているユーザー自身のコミュニケーション特徴・癖・盲点を2〜4文で書く。一般論は禁止。",
         "analysis_summary は最小限でよい。",
         "recommendations に次アクションを2〜3件入れる。",
         "next_options は「ユーザーが次に相手に言う一言の候補」を3つ提示する。",
@@ -511,6 +521,7 @@ export async function generateSparringTurn(input: {
     "roleplay_reply はFACILITATIONモード以外では空文字 \"\" を返すこと。ロールプレイ要素を他フィールドに混入させないこと。",
     "coach_feedback は浅い感想禁止。必ず『なぜズレたか→どう直すか→次の一言例』まで書く。",
     "analysis_summary は今回の状況固有名詞・事実・詰まりポイントを必ず含める。",
+    "user_pattern はユーザーの特性プロフィールと今回の発話の両方を踏まえ、今回出やすいコミュニケーション特徴を書く。抽象論は禁止。",
     "analysis_summary + coach_feedback + recommendations + roleplay_reply の合計は、日本語で500〜2000字に収める。",
     "禁止: 攻撃・威圧・不誠実な誘導。",
     "会話は実務的・中程度の長さ・次に動ける形。寄り添いは軽め。",

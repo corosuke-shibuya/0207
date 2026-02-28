@@ -621,6 +621,7 @@ export async function upsertSparringSession(input: {
   turns: { role: "user" | "assistant"; content: string }[];
   analysisSummary: string;
   recommendations: string[];
+  userPattern: string;
   followUpQuestion: string;
   goalProgress: "low" | "mid" | "high";
   nextOptions: string[];
@@ -704,6 +705,7 @@ export async function upsertSparringSession(input: {
               })),
               analysis_summary: input.analysisSummary,
               recommendations: input.recommendations,
+              user_pattern: input.userPattern,
               follow_up_question: input.followUpQuestion,
               goal_progress: input.goalProgress,
               next_options: input.nextOptions,
@@ -747,6 +749,7 @@ export async function upsertSparringSession(input: {
             })),
             analysis_summary: input.analysisSummary,
             recommendations: input.recommendations,
+            user_pattern: input.userPattern,
             follow_up_question: input.followUpQuestion,
             goal_progress: input.goalProgress,
             next_options: input.nextOptions,

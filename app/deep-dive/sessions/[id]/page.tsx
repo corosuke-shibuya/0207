@@ -46,6 +46,12 @@ export default async function SessionDetailPage({ params }: Props) {
                 <p>{sparring.analysis_summary}</p>
               </div>
             ) : null}
+            {sparring.user_pattern ? (
+              <div className="chat-bubble" style={{ marginTop: 10 }}>
+                <strong>あなたのコミュニケーション特徴</strong>
+                <p>{sparring.user_pattern}</p>
+              </div>
+            ) : null}
             {sparring.recommendations && sparring.recommendations.length > 0 ? (
               <div className="chat-bubble" style={{ marginTop: 10 }}>
                 <strong>推奨行動（改善案）</strong>
@@ -77,6 +83,17 @@ export default async function SessionDetailPage({ params }: Props) {
             </div>
           </>
         )}
+
+        {sparring ? (
+          <div className="button-row" style={{ marginTop: 16 }}>
+            <Link
+              className="secondary-button"
+              href={`/deep-dive/coach?personId=${encodeURIComponent(session.personId)}&scenario=${encodeURIComponent(session.inputText)}&mode=${session.kind === "POST" ? "PRE_REFLECT" : "PRE_STRATEGY"}` }
+            >
+              この相談をやり直す
+            </Link>
+          </div>
+        ) : null}
 
         <h3 style={{ marginTop: 18 }}>参照ノート</h3>
         <div className="timeline" style={{ marginTop: 10 }}>

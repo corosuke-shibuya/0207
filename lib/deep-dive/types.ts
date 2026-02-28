@@ -88,6 +88,7 @@ export type SparringState = {
   turns: SparringTurn[];
   analysis_summary?: string;
   recommendations?: string[];
+  user_pattern?: string;
   follow_up_question?: string;
   goal_progress?: "low" | "mid" | "high";
   next_options?: string[];

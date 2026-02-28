@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { upsertUserProfileAction } from "@/app/deep-dive/actions";
 import { getUserProfile } from "@/lib/deep-dive/store";
 
@@ -56,8 +57,63 @@ const PROFILE_QUESTIONS = [
   },
 ] as const;
 
-export default async function ProfilePage() {
+type Props = {
+  searchParams: Promise<{ edit?: string; saved?: string }>;
+};
+
+function labelFor(questionKey: string, value: string) {
+  const question = PROFILE_QUESTIONS.find((item) => item.key === questionKey);
+  return question?.options.find((option) => option.value === value)?.label ?? value;
+}
+
+export default async function ProfilePage({ searchParams }: Props) {
+  const params = await searchParams;
   const profile = await getUserProfile();
+  const isEdit = !profile || params.edit === "1";
+
+  if (!isEdit && profile) {
+    return (
+      <article className="card">
+        <p className="section-title">あなたの特性プロフィール</p>
+        <p className="dd-muted" style={{ marginBottom: 16 }}>
+          登録内容は1件だけ保存され、保存のたびに上書き更新されます。
+        </p>
+        {params.saved === "1" ? (
+          <div style={{ background: "#f0fdf4", borderRadius: 12, padding: "12px 16px", marginBottom: 16, color: "#166534" }}>
+            プロフィールを更新しました。
+          </div>
+        ) : null}
+
+        <div className="timeline">
+          <div className="chat-bubble">
+            <strong>名前</strong>
+            <p>{profile.name}</p>
+          </div>
+          {PROFILE_QUESTIONS.map((item) => (
+            <div key={item.key} className="chat-bubble">
+              <strong>{item.question}</strong>
+              <p>{labelFor(item.key, profile.typeAxes[item.key])}</p>
+            </div>
+          ))}
+          {profile.memo ? (
+            <div className="chat-bubble">
+              <strong>補足メモ</strong>
+              <p>{profile.memo}</p>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="button-row" style={{ marginTop: 16 }}>
+          <Link className="primary-button" href="/deep-dive/profile?edit=1">
+            編集する
+          </Link>
+          <Link className="secondary-button" href="/deep-dive/coach">
+            AI相談へ戻る
+          </Link>
+        </div>
+      </article>
+    );
+  }
 
   return (
     <article className="card">
@@ -103,9 +159,16 @@ export default async function ProfilePage() {
           defaultValue={profile?.memo ?? ""}
         />
 
-        <button className="primary-button" type="submit">
-          保存
-        </button>
+        <div className="button-row">
+          <button className="primary-button" type="submit">
+            {profile ? "更新する" : "保存する"}
+          </button>
+          {profile ? (
+            <Link className="secondary-button" href="/deep-dive/profile">
+              キャンセル
+            </Link>
+          ) : null}
+        </div>
       </form>
     </article>
   );

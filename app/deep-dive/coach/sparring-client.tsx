@@ -13,6 +13,7 @@ type PersonOption = {
 type SparringData = {
   analysis_summary: string;
   recommendations: string[];
+  user_pattern: string;
   coach_feedback: string;
   next_options: string[];
   follow_up_question: string;
@@ -106,6 +107,15 @@ function SparringResponseView({ data }: { data: SparringData }) {
         </div>
       )}
 
+      {data.user_pattern.trim() && (
+        <div style={{ background: "#eef6ff", borderRadius: 12, padding: "14px 18px", borderLeft: "4px solid #2563eb" }}>
+          <p style={{ fontSize: "0.85rem", color: "#1d4ed8", fontWeight: 700, marginBottom: 8 }}>
+            あなたのコミュニケーション特徴
+          </p>
+          <p style={{ margin: 0, lineHeight: 1.8 }}>{data.user_pattern}</p>
+        </div>
+      )}
+
       {data.recommendations.length > 0 && (
         <div style={{ background: "#f0fdf4", borderRadius: 12, padding: "14px 18px" }}>
           <p style={{ fontSize: "0.85rem", color: "#15803d", fontWeight: 700, marginBottom: 8 }}>
@@ -154,14 +164,20 @@ export function SparringClient({
   people,
   recentSessions,
   hasUserProfile,
+  initialPersonId,
+  initialScenario,
+  initialMode,
 }: {
   people: PersonOption[];
   recentSessions: RecentSession[];
   hasUserProfile: boolean;
+  initialPersonId?: string;
+  initialScenario?: string;
+  initialMode?: SparringMode;
 }) {
-  const [personId, setPersonId] = useState("");
-  const [mode, setMode] = useState<SparringMode>("PRE_STRATEGY");
-  const [scenario, setScenario] = useState("");
+  const [personId, setPersonId] = useState(initialPersonId ?? "");
+  const [mode, setMode] = useState<SparringMode>(initialMode ?? "PRE_STRATEGY");
+  const [scenario, setScenario] = useState(initialScenario ?? "");
   const [input, setInput] = useState("");
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [history, setHistory] = useState<ChatTurn[]>([]);
@@ -215,6 +231,7 @@ export function SparringClient({
         ? {
             analysis_summary: data.analysis_summary ?? "",
             recommendations: data.recommendations ?? [],
+            user_pattern: data.user_pattern ?? "",
             coach_feedback: data.coach_feedback ?? "",
             next_options: data.next_options ?? [],
             follow_up_question: data.follow_up_question ?? "",
@@ -363,9 +380,23 @@ export function SparringClient({
               onChange={(event) => setInput(event.target.value)}
               placeholder="追加で伝えたいことを書く"
             />
-            <button className="primary-button" type="button" disabled={!canSend} onClick={() => sendTurn()}>
-              {loading ? "返信生成中..." : "返信する"}
-            </button>
+            <div className="button-row">
+              <button className="primary-button" type="button" disabled={!canSend} onClick={() => sendTurn()}>
+                {loading ? "返信生成中..." : "返信する"}
+              </button>
+              <button
+                className="secondary-button"
+                type="button"
+                disabled={loading}
+                onClick={() => {
+                  setHistory([]);
+                  setSessionId(null);
+                  setInput("");
+                }}
+              >
+                改めてやり直す
+              </button>
+            </div>
           </div>
         ) : null}
       </article>
