@@ -385,7 +385,7 @@ function fallback(input: {
   return {
     mode: input.mode,
     analysis_summary: `${modeLabel[input.mode]}として見ると、直近発話は「${shortUser}」で、主論点は${hasStrongWords ? "リスク処理と意思決定" : "伝達順序と合意形成"}です。`,
-    recommendations: modeRecommendations[input.mode].slice(0, 3),
+    recommendations: modeRecommendations[input.mode].slice(0, 2),
     user_pattern:
       axes.verbosity === "short"
         ? "あなたは要点を先に置ける一方で、背景や感情の補足が薄く見えやすい傾向があります。今回も『伝えるべき事実』は整理できていますが、相手がどう受け取るかまで先回りして言葉を整える余地があります。"
@@ -425,9 +425,15 @@ export async function generateSparringTurn(input: {
   history: ChatTurn[];
   contextNoteIds?: string[];
 }): Promise<SparringResponse> {
-  const userProfile = await getUserProfile();
+  const [userProfile, selectedPerson, recentSnapshots, allNotes] = await Promise.all([
+    getUserProfile(),
+    input.personId ? getPerson(input.personId) : Promise.resolve(null),
+    input.personId ? listRecentSparringSnapshots(input.personId, 2) : Promise.resolve([]),
+    listNotes(20),
+  ]);
+
   const person =
-    (input.personId ? await getPerson(input.personId) : null) ??
+    selectedPerson ??
     ({
       id: "__none__",
       userId: "local",
@@ -444,9 +450,7 @@ export async function generateSparringTurn(input: {
       updatedAt: new Date().toISOString(),
     } as Person);
   const recent = input.personId
-    ? (await listRecentSparringSnapshots(input.personId, 3))
-        .filter((item) => item.sessionId !== input.sessionId)
-        .slice(0, 2)
+    ? recentSnapshots.filter((item) => item.sessionId !== input.sessionId).slice(0, 1)
     : [];
   const contextRefs = recent.map((item) => ({
     sessionId: item.sessionId,
@@ -455,12 +459,11 @@ export async function generateSparringTurn(input: {
     scenario: item.scenario,
   }));
 
-  const allNotes = await listNotes(30);
   const contextNotes = (input.contextNoteIds ?? [])
     .map((id) => allNotes.find((note) => note.id === id))
     .filter((note): note is Note => Boolean(note))
     .slice(0, 3)
-    .map((note) => ({ id: note.id, body: note.body.slice(0, 100), createdAt: note.createdAt }));
+    .map((note) => ({ id: note.id, body: note.body.slice(0, 80), createdAt: note.createdAt }));
 
   const lastUser = [...input.history].reverse().find((turn) => turn.role === "user")?.content ?? "";
   const previousAssistant = [...input.history].reverse().find((turn) => turn.role === "assistant")?.content ?? "";
@@ -544,10 +547,10 @@ export async function generateSparringTurn(input: {
       })),
     )}`,
     `直近ユーザー発話: ${lastUser}`,
-    `履歴: ${JSON.stringify(input.history.slice(-4))}`,
+    `履歴: ${JSON.stringify(input.history.slice(-3))}`,
   ].join("\n");
 
-  for (let i = 0; i < 2; i += 1) {
+  for (let i = 0; i < 1; i += 1) {
     const strictHint = i > 0 ? "厳密JSONのみ返してください。" : "";
     const retryHint =
       i === 0

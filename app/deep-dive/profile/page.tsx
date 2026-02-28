@@ -105,17 +105,15 @@ function buildCommunicationTraits(profile: UserProfile) {
       : "判断は慎重なので、精度は出しやすい一方でタイミングを逃さない工夫が必要です。"
   }`;
 
-  const note = memo?.trim()
-    ? `補足メモを見ると、${memo.trim()}`
-    : "";
+  const note = memo?.trim() ? `補足メモを見ると、${memo.trim()}` : "";
 
   return [opening, delivery, persuasion, tension, note].filter(Boolean).join(" ");
 }
 
 function buildCommunicationAdvice(profile: UserProfile) {
   const { typeAxes } = profile;
-  const pitfalls = [];
-  const improvements = [];
+  const pitfalls: string[] = [];
+  const improvements: string[] = [];
 
   if (typeAxes.priority === "logic") {
     pitfalls.push("筋は通っていても、相手が『受け止めてもらえた』と感じる前に正しさへ進みやすいです。");
@@ -168,9 +166,6 @@ export default async function ProfilePage({ searchParams }: Props) {
     return (
       <article className="card">
         <p className="section-title">あなたの特性プロフィール</p>
-        <p className="dd-muted" style={{ marginBottom: 16 }}>
-          登録内容は1件だけ保存され、保存のたびに上書き更新されます。
-        </p>
         {params.saved === "1" ? (
           <div style={{ background: "#f0fdf4", borderRadius: 12, padding: "12px 16px", marginBottom: 16, color: "#166534" }}>
             プロフィールを更新しました。
@@ -181,7 +176,7 @@ export default async function ProfilePage({ searchParams }: Props) {
           style={{
             marginBottom: 16,
             borderRadius: 20,
-            padding: "20px 22px",
+            padding: "22px 22px 20px",
             background: "linear-gradient(135deg, #e8f1ff 0%, #f7fbff 100%)",
             border: "1px solid #b8d4ff",
             boxShadow: "0 18px 40px rgba(74, 124, 255, 0.10)",
@@ -190,23 +185,33 @@ export default async function ProfilePage({ searchParams }: Props) {
           <p style={{ margin: 0, fontSize: "0.82rem", fontWeight: 700, color: "#1d4ed8", letterSpacing: "0.04em" }}>
             COMMUNICATION INSIGHT
           </p>
-          <strong style={{ display: "block", marginTop: 6, fontSize: "1.1rem" }}>あなたのコミュニケーション特徴</strong>
-          <p style={{ marginTop: 10, marginBottom: 0, lineHeight: 1.8 }}>{traits}</p>
-        </div>
 
-        <div className="chat-bubble" style={{ marginBottom: 16, borderLeft: "4px solid #4a7cff", background: "#ffffff" }}>
-          <strong>陥りがちなポイント</strong>
-          <ul style={{ marginTop: 10, paddingLeft: 20, lineHeight: 1.8 }}>
-            {advice.pitfalls.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
-          <strong style={{ display: "block", marginTop: 12 }}>改善のヒント</strong>
-          <ul style={{ marginTop: 10, paddingLeft: 20, lineHeight: 1.8 }}>
-            {advice.improvements.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
+          <div style={{ marginTop: 14, background: "rgba(255,255,255,0.76)", borderRadius: 16, padding: "16px 18px" }}>
+            <strong style={{ display: "block", fontSize: "1.08rem" }}>あなたのコミュニケーション特徴</strong>
+            <p style={{ marginTop: 10, marginBottom: 0, lineHeight: 1.8 }}>{traits}</p>
+          </div>
+
+          <div style={{ marginTop: 14, background: "#ffffff", borderRadius: 16, padding: "16px 18px", border: "1px solid #dbeafe" }}>
+            <strong style={{ display: "block", fontSize: "1.02rem" }}>陥りがちなポイント・改善のヒント</strong>
+            <div style={{ display: "grid", gap: 14, marginTop: 12 }}>
+              <div>
+                <p style={{ margin: 0, fontSize: "0.88rem", fontWeight: 700, color: "#1d4ed8" }}>陥りがちなポイント</p>
+                <ul style={{ marginTop: 10, marginBottom: 0, paddingLeft: 20, lineHeight: 1.8 }}>
+                  {advice.pitfalls.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <p style={{ margin: 0, fontSize: "0.88rem", fontWeight: 700, color: "#15803d" }}>改善のヒント</p>
+                <ul style={{ marginTop: 10, marginBottom: 0, paddingLeft: 20, lineHeight: 1.8 }}>
+                  {advice.improvements.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="timeline">

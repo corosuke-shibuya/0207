@@ -79,9 +79,7 @@ function SparringResponseView({ data }: { data: SparringData }) {
             borderLeft: "4px solid #4a7cff",
           }}
         >
-          <p style={{ fontSize: "0.85rem", color: "#4a7cff", fontWeight: 700, marginBottom: 6 }}>
-            相手の反応
-          </p>
+          <p style={{ fontSize: "0.85rem", color: "#4a7cff", fontWeight: 700, marginBottom: 6 }}>相手の反応</p>
           <p style={{ margin: 0, lineHeight: 1.7 }}>{data.roleplay_reply}</p>
         </div>
       )}
@@ -91,12 +89,8 @@ function SparringResponseView({ data }: { data: SparringData }) {
           {typeof ReactMarkdown !== "undefined" ? (
             <ReactMarkdown
               components={{
-                strong: ({ children }) => (
-                  <strong style={{ color: "#1d4ed8" }}>{children}</strong>
-                ),
-                p: ({ children }) => (
-                  <p style={{ margin: "0 0 12px 0" }}>{children}</p>
-                ),
+                strong: ({ children }) => <strong style={{ color: "#1d4ed8" }}>{children}</strong>,
+                p: ({ children }) => <p style={{ margin: "0 0 12px 0" }}>{children}</p>,
               }}
             >
               {data.coach_feedback}
@@ -107,20 +101,9 @@ function SparringResponseView({ data }: { data: SparringData }) {
         </div>
       )}
 
-      {data.user_pattern.trim() && (
-        <div style={{ background: "#eef6ff", borderRadius: 12, padding: "14px 18px", borderLeft: "4px solid #2563eb" }}>
-          <p style={{ fontSize: "0.85rem", color: "#1d4ed8", fontWeight: 700, marginBottom: 8 }}>
-            あなたのコミュニケーション特徴
-          </p>
-          <p style={{ margin: 0, lineHeight: 1.8 }}>{data.user_pattern}</p>
-        </div>
-      )}
-
       {data.recommendations.length > 0 && (
         <div style={{ background: "#f0fdf4", borderRadius: 12, padding: "14px 18px" }}>
-          <p style={{ fontSize: "0.85rem", color: "#15803d", fontWeight: 700, marginBottom: 8 }}>
-            💡 おすすめアクション
-          </p>
+          <p style={{ fontSize: "0.85rem", color: "#15803d", fontWeight: 700, marginBottom: 8 }}>💡 おすすめアクション</p>
           <ol style={{ margin: 0, paddingLeft: 20, lineHeight: 1.8 }}>
             {data.recommendations.map((item, i) => (
               <li key={i}>{item}</li>
@@ -131,9 +114,7 @@ function SparringResponseView({ data }: { data: SparringData }) {
 
       {data.next_options.length > 0 && (
         <div style={{ background: "#f7f8fa", borderRadius: 12, padding: "14px 18px" }}>
-          <p style={{ fontSize: "0.85rem", color: "#5a667b", fontWeight: 700, marginBottom: 8 }}>
-            🗣️ こんな切り出し方があります
-          </p>
+          <p style={{ fontSize: "0.85rem", color: "#5a667b", fontWeight: 700, marginBottom: 8 }}>🗣️ こんな切り出し方があります</p>
           <ul style={{ margin: 0, paddingLeft: 20, lineHeight: 1.8 }}>
             {data.next_options.map((option, i) => (
               <li key={i} style={{ color: "#374151" }}>
@@ -184,14 +165,74 @@ export function SparringClient({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const hasStarted = useMemo(() => history.some((turn) => turn.role === "assistant"), [history]);
   const canStart = useMemo(() => Boolean(scenario.trim().length >= 8 && !loading), [scenario, loading]);
-  const canSend = useMemo(
-    () => Boolean(history.some((turn) => turn.role === "assistant") && input.trim().length > 0 && !loading),
-    [history, input, loading],
-  );
+  const canSend = useMemo(() => Boolean(hasStarted && input.trim().length > 0 && !loading), [hasStarted, input, loading]);
 
-  async function sendTurn(nextUserMessage?: string) {
-    const userMessage = (nextUserMessage ?? input).trim();
+  function buildAssistantTurn(data: any): ChatTurn {
+    const sparringData: SparringData | undefined = data.analysis_summary
+      ? {
+          analysis_summary: data.analysis_summary ?? "",
+          recommendations: data.recommendations ?? [],
+          user_pattern: data.user_pattern ?? "",
+          coach_feedback: data.coach_feedback ?? "",
+          next_options: data.next_options ?? [],
+          follow_up_question: data.follow_up_question ?? "",
+          roleplay_reply: data.roleplay_reply ?? "",
+          risk_note: data.risk_note ?? "",
+        }
+      : undefined;
+
+    const assistantText = typeof data.assistant_text === "string" ? data.assistant_text : data.analysis_summary ?? "回答を生成できませんでした。";
+    return { role: "assistant", content: assistantText, sparringData };
+  }
+
+  async function startSparring() {
+    const activeScenario = scenario.trim();
+    if (!activeScenario) {
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setHistory([]);
+    setSessionId(null);
+    setInput("");
+
+    try {
+      const response = await fetch("/api/deep-dive/sparring", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId: null,
+          personId,
+          mode,
+          scenario: activeScenario,
+          history: [],
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        setError(data?.error ?? "壁打ち生成に失敗しました");
+        setLoading(false);
+        return;
+      }
+
+      if (typeof data.sessionId === "string") {
+        setSessionId(data.sessionId);
+      }
+
+      setHistory([buildAssistantTurn(data)]);
+      setLoading(false);
+    } catch {
+      setError("壁打ち生成に失敗しました");
+      setLoading(false);
+    }
+  }
+
+  async function sendTurn() {
+    const userMessage = input.trim();
     if (!userMessage) {
       return;
     }
@@ -203,60 +244,43 @@ export function SparringClient({
     setHistory(nextHistory);
     setInput("");
 
-    const response = await fetch("/api/deep-dive/sparring", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        sessionId,
-        personId,
-        mode,
-        scenario,
-        history: nextHistory.map((turn) => ({ role: turn.role, content: turn.content })),
-      }),
-    });
+    try {
+      const response = await fetch("/api/deep-dive/sparring", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId,
+          personId,
+          mode,
+          scenario,
+          history: nextHistory.map((turn) => ({ role: turn.role, content: turn.content })),
+        }),
+      });
 
-    const data = await response.json();
-    if (!response.ok) {
-      setError(data?.error ?? "壁打ち生成に失敗しました");
+      const data = await response.json();
+      if (!response.ok) {
+        setError(data?.error ?? "壁打ち生成に失敗しました");
+        setLoading(false);
+        return;
+      }
+
+      if (typeof data.sessionId === "string") {
+        setSessionId(data.sessionId);
+      }
+
+      setHistory([...nextHistory, buildAssistantTurn(data)]);
       setLoading(false);
-      return;
+    } catch {
+      setError("壁打ち生成に失敗しました");
+      setLoading(false);
     }
-
-    if (typeof data.sessionId === "string") {
-      setSessionId(data.sessionId);
-    }
-
-    const sparringData: SparringData | undefined =
-      data.analysis_summary
-        ? {
-            analysis_summary: data.analysis_summary ?? "",
-            recommendations: data.recommendations ?? [],
-            user_pattern: data.user_pattern ?? "",
-            coach_feedback: data.coach_feedback ?? "",
-            next_options: data.next_options ?? [],
-            follow_up_question: data.follow_up_question ?? "",
-            roleplay_reply: data.roleplay_reply ?? "",
-            risk_note: data.risk_note ?? "",
-          }
-        : undefined;
-
-    const assistantText =
-      typeof data.assistant_text === "string"
-        ? data.assistant_text
-        : data.analysis_summary ?? "回答を生成できませんでした。";
-
-    setHistory([...nextHistory, { role: "assistant", content: assistantText, sparringData }]);
-    setLoading(false);
   }
 
-  async function startSparring(prefill?: string) {
-    if (prefill && !scenario.trim()) {
-      setScenario(prefill);
-    }
-    const activeScenario = (prefill && !scenario.trim() ? prefill : scenario).trim();
+  function resetSparring() {
     setHistory([]);
     setSessionId(null);
-    await sendTurn(activeScenario);
+    setInput("");
+    setError(null);
   }
 
   return (
@@ -333,25 +357,6 @@ export function SparringClient({
             </select>
           </label>
         </div>
-
-        <label className="input-area" style={{ marginTop: 12, gap: 6 }}>
-          <span>状況</span>
-          <small style={{ color: "#5a667b", fontSize: "0.96rem", lineHeight: 1.45 }}>
-            相談でクリアにしたいこと(相談のゴール)を入力するとより回答精度が上がります（例: 責任論に入らず合意形成したい）
-          </small>
-          <textarea
-            value={scenario}
-            onChange={(event) => setScenario(event.target.value)}
-            placeholder="いま困っている状況を短く書いてください"
-          />
-        </label>
-
-        <div className="button-row" style={{ marginTop: 12 }}>
-          <button className="primary-button" type="button" onClick={() => startSparring()} disabled={!canStart}>
-            {loading ? "相談開始中..." : "AIに相談を開始"}
-          </button>
-        </div>
-        {error ? <p className="muted" style={{ marginTop: 8 }}>{error}</p> : null}
       </article>
 
       <article className="card">
@@ -373,32 +378,30 @@ export function SparringClient({
           )}
         </div>
 
-        {history.some((turn) => turn.role === "assistant") ? (
-          <div className="input-area" style={{ marginTop: 14 }}>
-            <textarea
-              value={input}
-              onChange={(event) => setInput(event.target.value)}
-              placeholder="追加で伝えたいことを書く"
-            />
-            <div className="button-row">
-              <button className="primary-button" type="button" disabled={!canSend} onClick={() => sendTurn()}>
-                {loading ? "返信生成中..." : "返信する"}
-              </button>
-              <button
-                className="secondary-button"
-                type="button"
-                disabled={loading}
-                onClick={() => {
-                  setHistory([]);
-                  setSessionId(null);
-                  setInput("");
-                }}
-              >
+        <div className="input-area" style={{ marginTop: 14 }}>
+          <span>{hasStarted ? "返信する" : "状況"}</span>
+          {!hasStarted ? (
+            <small style={{ color: "#5a667b", fontSize: "0.96rem", lineHeight: 1.45 }}>
+              相談でクリアにしたいこと(相談のゴール)を入力するとより回答精度が上がります（例: 責任論に入らず合意形成したい）
+            </small>
+          ) : null}
+          <textarea
+            value={hasStarted ? input : scenario}
+            onChange={(event) => (hasStarted ? setInput(event.target.value) : setScenario(event.target.value))}
+            placeholder={hasStarted ? "追加で伝えたいことを書く" : "いま困っている状況を短く書いてください"}
+          />
+          <div className="button-row">
+            <button className="primary-button" type="button" disabled={hasStarted ? !canSend : !canStart} onClick={hasStarted ? sendTurn : startSparring}>
+              {loading ? (hasStarted ? "返信生成中..." : "相談開始中...") : hasStarted ? "返信する" : "AIに相談を開始"}
+            </button>
+            {hasStarted ? (
+              <button className="secondary-button" type="button" disabled={loading} onClick={resetSparring}>
                 改めてやり直す
               </button>
-            </div>
+            ) : null}
           </div>
-        ) : null}
+          {error ? <p className="muted">{error}</p> : null}
+        </div>
       </article>
 
       <article className="card">
