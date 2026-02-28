@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { upsertUserProfileAction } from "@/app/deep-dive/actions";
 import { getUserProfile } from "@/lib/deep-dive/store";
+import type { UserProfile } from "@/lib/deep-dive/types";
 
 const PROFILE_QUESTIONS = [
   {
@@ -66,12 +67,59 @@ function labelFor(questionKey: string, value: string) {
   return question?.options.find((option) => option.value === value)?.label ?? value;
 }
 
+function buildCommunicationTraits(profile: UserProfile) {
+  const { typeAxes, memo, name } = profile;
+
+  const opening = {
+    logic: `${name}さんは、話の筋と整合性をかなり重視するタイプです。`,
+    outcome: `${name}さんは、成果と前進速度を優先して判断しやすいタイプです。`,
+    harmony: `${name}さんは、場の空気や相手との関係維持を重視するタイプです。`,
+    risk: `${name}さんは、失敗や抜け漏れを避けるために慎重に考えるタイプです。`,
+    politics: `${name}さんは、発言の中身だけでなく見え方や評価のされ方も意識しやすいタイプです。`,
+    speed: `${name}さんは、まず決めて進めることを重視するタイプです。`,
+  }[typeAxes.priority];
+
+  const delivery = `${
+    typeAxes.directness === "direct"
+      ? "伝え方は比較的ストレートで、結論を先に置きやすい一方、"
+      : "伝え方は配慮を入れる寄りで、相手への当たりは柔らかい一方、"
+  }${
+    typeAxes.verbosity === "long"
+      ? "背景や理由まで丁寧に説明する傾向があります。"
+      : "要点を短くまとめる傾向があります。"
+  }`;
+
+  const persuasion = `${
+    typeAxes.emphasis === "logical"
+      ? "相手を動かすときは根拠や筋の通り方を重視しやすく、感情面の納得を後回しにしやすいです。"
+      : "相手を動かすときは感情や関係性への配慮を重視しやすく、論点のシャープさが弱まる場面があります。"
+  }`;
+
+  const tension = `${
+    typeAxes.stance === "defensive"
+      ? "意見が食い違う場面では自分の見立てを守りやすいので、正しさはあっても相手に押し返された印象を残すことがあります。"
+      : "意見が食い違う場面ではまず相手に合わせて調整しやすいので、自分の論点を引っ込めすぎない意識が必要です。"
+  } ${
+    typeAxes.decisionSpeed === "fast"
+      ? "判断は早めなので、結論を急ぐぶん相手の理解が追いつく前に進めてしまう場面に注意が必要です。"
+      : "判断は慎重なので、精度は出しやすい一方でタイミングを逃さない工夫が必要です。"
+  }`;
+
+  const note = memo?.trim()
+    ? `補足メモを見ると、${memo.trim()}`
+    : "";
+
+  return [opening, delivery, persuasion, tension, note].filter(Boolean).join(" ");
+}
+
 export default async function ProfilePage({ searchParams }: Props) {
   const params = await searchParams;
   const profile = await getUserProfile();
   const isEdit = !profile || params.edit === "1";
 
   if (!isEdit && profile) {
+    const traits = buildCommunicationTraits(profile);
+
     return (
       <article className="card">
         <p className="section-title">あなたの特性プロフィール</p>
@@ -83,6 +131,11 @@ export default async function ProfilePage({ searchParams }: Props) {
             プロフィールを更新しました。
           </div>
         ) : null}
+
+        <div className="chat-bubble" style={{ marginBottom: 16 }}>
+          <strong>あなたのコミュニケーション特徴</strong>
+          <p>{traits}</p>
+        </div>
 
         <div className="timeline">
           <div className="chat-bubble">
