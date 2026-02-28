@@ -112,6 +112,50 @@ function buildCommunicationTraits(profile: UserProfile) {
   return [opening, delivery, persuasion, tension, note].filter(Boolean).join(" ");
 }
 
+function buildCommunicationAdvice(profile: UserProfile) {
+  const { typeAxes } = profile;
+  const pitfalls = [];
+  const improvements = [];
+
+  if (typeAxes.priority === "logic") {
+    pitfalls.push("筋は通っていても、相手が『受け止めてもらえた』と感じる前に正しさへ進みやすいです。");
+    improvements.push("最初の一言で相手の懸念や感情を短く受け止めてから、本論に入る順番を固定すると伝わりやすくなります。");
+  } else if (typeAxes.priority === "outcome") {
+    pitfalls.push("前進を急ぐぶん、相手には『もう結論が決まっている』と見えやすいです。");
+    improvements.push("結論を置いたあとに、相手が気にしそうな論点を先回りで1つ添えると押し切り感が減ります。");
+  } else if (typeAxes.priority === "harmony") {
+    pitfalls.push("場を荒らさないことを優先しすぎると、自分の本音や論点が薄まる場面があります。");
+    improvements.push("配慮の一言を置いたあとで、自分が本当に決めたい論点を1文で明示するとバランスが取れます。");
+  } else if (typeAxes.priority === "risk") {
+    pitfalls.push("慎重さが強みですが、懸念の共有が先に立つと消極的に見られやすいです。");
+    improvements.push("リスクを出す前に『進める前提です』を置き、懸念は対応策とセットで話すと印象が安定します。");
+  } else if (typeAxes.priority === "politics") {
+    pitfalls.push("見え方を意識するぶん、言いたいことより安全な言い回しへ寄りやすいです。");
+    improvements.push("相手の立場を読んだうえで、自分の主張を1文だけは曖昧にせず残すと存在感がぶれません。");
+  } else if (typeAxes.priority === "speed") {
+    pitfalls.push("判断の速さが強みですが、相手の理解や納得の前に話を進めてしまう場面があります。");
+    improvements.push("結論のあとに『ここまでで違和感ありますか』を挟むだけで、速さを維持したまま摩擦を減らせます。");
+  }
+
+  if (typeAxes.directness === "direct" && typeAxes.verbosity === "short") {
+    pitfalls.push("短くストレートに伝えるぶん、相手によっては圧や冷たさとして受け取られることがあります。");
+    improvements.push("結論の後ろに背景を1文だけ足すと、鋭さを残したまま誤解を減らせます。");
+  } else if (typeAxes.directness === "indirect" && typeAxes.verbosity === "long") {
+    pitfalls.push("丁寧さはある一方で、結局何を言いたいのかが後半まで見えにくくなることがあります。");
+    improvements.push("前置きが長くなる場面では、最初に結論の見出しだけ置いてから詳細に入ると通りやすいです。");
+  }
+
+  if (typeAxes.emphasis === "logical") {
+    pitfalls.push("根拠を固めるほど正しい説明になりますが、相手の感情的な引っかかりが残ると動きません。");
+    improvements.push("データや論理の前に『相手が何を不安に思うか』を一度言語化してから説明すると、納得率が上がります。");
+  } else {
+    pitfalls.push("配慮が行き届く一方で、論点や判断基準がぼやけると説得力が落ちやすいです。");
+    improvements.push("共感の後に『今回はここを決めたいです』と論点を締めると、優しさと強さを両立できます。");
+  }
+
+  return { pitfalls: pitfalls.slice(0, 3), improvements: improvements.slice(0, 3) };
+}
+
 export default async function ProfilePage({ searchParams }: Props) {
   const params = await searchParams;
   const profile = await getUserProfile();
@@ -119,6 +163,7 @@ export default async function ProfilePage({ searchParams }: Props) {
 
   if (!isEdit && profile) {
     const traits = buildCommunicationTraits(profile);
+    const advice = buildCommunicationAdvice(profile);
 
     return (
       <article className="card">
@@ -132,9 +177,36 @@ export default async function ProfilePage({ searchParams }: Props) {
           </div>
         ) : null}
 
-        <div className="chat-bubble" style={{ marginBottom: 16 }}>
-          <strong>あなたのコミュニケーション特徴</strong>
-          <p>{traits}</p>
+        <div
+          style={{
+            marginBottom: 16,
+            borderRadius: 20,
+            padding: "20px 22px",
+            background: "linear-gradient(135deg, #e8f1ff 0%, #f7fbff 100%)",
+            border: "1px solid #b8d4ff",
+            boxShadow: "0 18px 40px rgba(74, 124, 255, 0.10)",
+          }}
+        >
+          <p style={{ margin: 0, fontSize: "0.82rem", fontWeight: 700, color: "#1d4ed8", letterSpacing: "0.04em" }}>
+            COMMUNICATION INSIGHT
+          </p>
+          <strong style={{ display: "block", marginTop: 6, fontSize: "1.1rem" }}>あなたのコミュニケーション特徴</strong>
+          <p style={{ marginTop: 10, marginBottom: 0, lineHeight: 1.8 }}>{traits}</p>
+        </div>
+
+        <div className="chat-bubble" style={{ marginBottom: 16, borderLeft: "4px solid #4a7cff", background: "#ffffff" }}>
+          <strong>陥りがちなポイント</strong>
+          <ul style={{ marginTop: 10, paddingLeft: 20, lineHeight: 1.8 }}>
+            {advice.pitfalls.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+          <strong style={{ display: "block", marginTop: 12 }}>改善のヒント</strong>
+          <ul style={{ marginTop: 10, paddingLeft: 20, lineHeight: 1.8 }}>
+            {advice.improvements.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
         </div>
 
         <div className="timeline">
