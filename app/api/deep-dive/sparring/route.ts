@@ -55,10 +55,11 @@ export async function POST(request: Request) {
       })
       .filter((turn: { content: string }) => turn.content.trim().length > 0);
 
-    if (!scenario || history.length === 0) {
-      return NextResponse.json({ error: "scenario, history are required" }, { status: 400 });
+    if (!scenario) {
+      return NextResponse.json({ error: "scenario is required" }, { status: 400 });
     }
 
+    const generationHistory: ChatTurn[] = history.length > 0 ? history : [{ role: "user", content: scenario }];
     const contextNoteIds = await pickContextNoteIds(scenario, "PRE", personId || "");
 
     const result = await generateSparringTurn({
@@ -67,7 +68,7 @@ export async function POST(request: Request) {
       goal,
       scenario,
       mode,
-      history,
+      history: generationHistory,
       contextNoteIds,
     });
 
@@ -88,7 +89,7 @@ export async function POST(request: Request) {
       .filter(Boolean)
       .join("\n");
     const normalizedAssistantText = normalizeLength(assistantText);
-    const turns = [...history, { role: "assistant" as const, content: normalizedAssistantText }];
+    const turns = [...generationHistory, { role: "assistant" as const, content: normalizedAssistantText }];
     const saved = await upsertSparringSession({
       sessionId: sessionId || undefined,
       personId: personId || undefined,
