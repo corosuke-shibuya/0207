@@ -107,7 +107,18 @@ function overlapRatio(a: string, b: string) {
 }
 
 function validateResponseShape(parsed: SparringResponse) {
-  if (!parsed.analysis_summary?.trim() || !parsed.coach_feedback?.trim() || !parsed.user_pattern?.trim()) {
+  if (!parsed.coach_feedback?.trim()) {
+    return false;
+  }
+
+  if (parsed.mode === "PRE_REFLECT") {
+    if (parsed.coach_feedback.trim().length < 100) {
+      return false;
+    }
+    return true;
+  }
+
+  if (!parsed.analysis_summary?.trim() || !parsed.user_pattern?.trim()) {
     return false;
   }
   if (parsed.mode === "FACILITATION" && !parsed.roleplay_reply?.trim()) {
@@ -398,15 +409,15 @@ function fallback(input: {
   return {
     mode: input.mode,
     analysis_summary: `${modeLabel[input.mode]}として見ると、直近発話は「${shortUser}」で、主論点は${input.mode === "PRE_REFLECT" ? "会話のズレ要因と受け取られ方" : hasStrongWords ? "リスク処理と意思決定" : "伝達順序と合意形成"}です。`,
-    recommendations: modeRecommendations[input.mode].slice(0, 2),
+    recommendations: input.mode === "PRE_REFLECT" ? [] : modeRecommendations[input.mode].slice(0, 2),
     user_pattern:
       axes.verbosity === "short"
         ? "あなたは要点を先に置ける一方で、背景や感情の補足が薄く見えやすい傾向があります。今回も『伝えるべき事実』は整理できていますが、相手がどう受け取るかまで先回りして言葉を整える余地があります。"
         : "あなたは背景まで丁寧に考える一方で、論点を広げすぎて相手にとっての要点が遅れて見えやすい傾向があります。今回も状況理解は深いですが、何を先に伝えるかの取捨選択が重要です。",
-    follow_up_question: followUp,
+    follow_up_question: input.mode === "PRE_REFLECT" ? "" : followUp,
     roleplay_reply: input.mode === "FACILITATION" ? `${dynamicReply}\n\nあなたの直近発言: ${shortUser}` : "",
     coach_feedback: coachFeedback,
-    next_options: [optionA, optionB, optionC],
+    next_options: input.mode === "PRE_REFLECT" ? [] : [optionA, optionB, optionC],
     risk_note: `目的「${input.goal || "未設定"}」に対して、意図が強すぎる表現は政治的リスクになります。`,
     goal_progress: input.lastUser.length > 80 ? "high" : input.lastUser.length > 30 ? "mid" : "low",
     context_refs: [],
@@ -593,8 +604,9 @@ export async function generateSparringTurn(input: {
         }
         return {
           ...parsed,
-          recommendations: (parsed.recommendations ?? []).slice(0, 3),
-          next_options: (parsed.next_options ?? []).slice(0, 3),
+          recommendations: input.mode === "PRE_REFLECT" ? [] : (parsed.recommendations ?? []).slice(0, 3),
+          next_options: input.mode === "PRE_REFLECT" ? [] : (parsed.next_options ?? []).slice(0, 3),
+          follow_up_question: input.mode === "PRE_REFLECT" ? "" : parsed.follow_up_question,
           context_refs: contextRefs,
         };
       }

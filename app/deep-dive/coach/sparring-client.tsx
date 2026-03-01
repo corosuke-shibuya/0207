@@ -68,6 +68,8 @@ function renderMarkdown(text: string) {
 }
 
 function SparringResponseView({ data }: { data: SparringData }) {
+  const isPureText = data.recommendations.length === 0 && data.next_options.length === 0;
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       {data.roleplay_reply.trim() && (
@@ -91,6 +93,15 @@ function SparringResponseView({ data }: { data: SparringData }) {
               components={{
                 strong: ({ children }) => <strong style={{ color: "#1d4ed8" }}>{children}</strong>,
                 p: ({ children }) => <p style={{ margin: "0 0 12px 0" }}>{children}</p>,
+                h2: ({ children }) => (
+                  <h2 style={{ fontSize: "1.05rem", fontWeight: 700, margin: "16px 0 8px 0", color: "#1e293b" }}>{children}</h2>
+                ),
+                h3: ({ children }) => (
+                  <h3 style={{ fontSize: "0.95rem", fontWeight: 700, margin: "12px 0 6px 0", color: "#334155" }}>{children}</h3>
+                ),
+                ul: ({ children }) => <ul style={{ margin: "8px 0", paddingLeft: 20 }}>{children}</ul>,
+                ol: ({ children }) => <ol style={{ margin: "8px 0", paddingLeft: 20 }}>{children}</ol>,
+                li: ({ children }) => <li style={{ marginBottom: 4, lineHeight: 1.8 }}>{children}</li>,
               }}
             >
               {data.coach_feedback}
@@ -101,28 +112,32 @@ function SparringResponseView({ data }: { data: SparringData }) {
         </div>
       )}
 
-      {data.recommendations.length > 0 && (
-        <div style={{ background: "#f0fdf4", borderRadius: 12, padding: "14px 18px" }}>
-          <p style={{ fontSize: "0.85rem", color: "#15803d", fontWeight: 700, marginBottom: 8 }}>💡 おすすめアクション</p>
-          <ol style={{ margin: 0, paddingLeft: 20, lineHeight: 1.8 }}>
-            {data.recommendations.map((item, i) => (
-              <li key={i}>{item}</li>
-            ))}
-          </ol>
-        </div>
-      )}
+      {!isPureText && (
+        <>
+          {data.recommendations.length > 0 && (
+            <div style={{ background: "#f0fdf4", borderRadius: 12, padding: "14px 18px" }}>
+              <p style={{ fontSize: "0.85rem", color: "#15803d", fontWeight: 700, marginBottom: 8 }}>💡 おすすめアクション</p>
+              <ol style={{ margin: 0, paddingLeft: 20, lineHeight: 1.8 }}>
+                {data.recommendations.map((item, i) => (
+                  <li key={i}>{item}</li>
+                ))}
+              </ol>
+            </div>
+          )}
 
-      {data.next_options.length > 0 && (
-        <div style={{ background: "#f7f8fa", borderRadius: 12, padding: "14px 18px" }}>
-          <p style={{ fontSize: "0.85rem", color: "#5a667b", fontWeight: 700, marginBottom: 8 }}>🗣️ こんな切り出し方があります</p>
-          <ul style={{ margin: 0, paddingLeft: 20, lineHeight: 1.8 }}>
-            {data.next_options.map((option, i) => (
-              <li key={i} style={{ color: "#374151" }}>
-                {option}
-              </li>
-            ))}
-          </ul>
-        </div>
+          {data.next_options.length > 0 && (
+            <div style={{ background: "#f7f8fa", borderRadius: 12, padding: "14px 18px" }}>
+              <p style={{ fontSize: "0.85rem", color: "#5a667b", fontWeight: 700, marginBottom: 8 }}>🗣️ こんな切り出し方があります</p>
+              <ul style={{ margin: 0, paddingLeft: 20, lineHeight: 1.8 }}>
+                {data.next_options.map((option, i) => (
+                  <li key={i} style={{ color: "#374151" }}>
+                    {option}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </>
       )}
 
       {data.follow_up_question.trim() && (
@@ -223,7 +238,7 @@ export function SparringClient({
         setSessionId(data.sessionId);
       }
 
-      setHistory([buildAssistantTurn(data)]);
+      setHistory([{ role: "user", content: activeScenario }, buildAssistantTurn(data)]);
       setLoading(false);
     } catch {
       setError("壁打ち生成に失敗しました");
