@@ -360,13 +360,9 @@ export function SparringClient({
       </article>
 
       <article className="card">
-        <div className="chat-window">
-          {history.length === 0 ? (
-            <div className="dd-turn-ai">
-              <p className="dd-message-text">こんにちは! コミュニケーションのこと、何が相談したいですか?</p>
-            </div>
-          ) : (
-            history.map((turn, index) => (
+        {hasStarted ? (
+          <div className="chat-window">
+            {history.map((turn, index) => (
               <div key={index} className={turn.role === "assistant" ? "dd-turn-ai" : "dd-turn-user"}>
                 {turn.role === "assistant" && turn.sparringData ? (
                   <SparringResponseView data={turn.sparringData} />
@@ -374,11 +370,11 @@ export function SparringClient({
                   <p className="dd-message-text">{turn.content}</p>
                 )}
               </div>
-            ))
-          )}
-        </div>
+            ))}
+          </div>
+        ) : null}
 
-        <div className="input-area" style={{ marginTop: 14 }}>
+        <div className="input-area" style={{ marginTop: hasStarted ? 14 : 0 }}>
           <span>{hasStarted ? "返信する" : "状況"}</span>
           {!hasStarted ? (
             <small style={{ color: "#5a667b", fontSize: "0.96rem", lineHeight: 1.45 }}>
