@@ -38,7 +38,7 @@ type RecentSession = {
 type SparringMode = "PRE_REFLECT" | "PRE_STRATEGY" | "FACILITATION";
 
 const MODE_OPTIONS: { value: SparringMode; label: string; helper: string }[] = [
-  { value: "PRE_REFLECT", label: "A. 事前振り返り", helper: "直近のズレ要因を整理して、次で直す点を絞る" },
+  { value: "PRE_REFLECT", label: "A. 事後振り返り", helper: "会話のズレや詰まりを振り返り、次に見るべき論点を深める" },
   { value: "PRE_STRATEGY", label: "B. 事前戦略", helper: "相手に合わせた伝え方・順序・選択肢を作る" },
   { value: "FACILITATION", label: "C. ファシリ支援", helper: "会議の論点整理と進行の詰まりを解消する" },
 ];
